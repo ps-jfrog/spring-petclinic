@@ -14,6 +14,7 @@ env:
   JF_NAME: "psrbinstance2" # JFrog instance name
   JF_RT_URL: "https://psrbinstance2.jfrog.io"
   BUILD_NAME: "spring-petclinic"
+  JAR_VERSION: "3.5.0-SNAPSHOT"
   JOB_SUMMARY: false
   JFROG_CLI_LOG_LEVEL: DEBUG # DEBUG, INFO, WARN, ERROR
   JAVA_PROVIDER: 'corretto'
@@ -147,8 +148,12 @@ jobs:
           mvn clean install -DskipTests=true -Denforcer.skip=true
 
       - name: "Package: Docker build and push"
+        env:
+          JAR_FILE: "${{env.BUILD_NAME}}-${{env.JAR_VERSION}}.jar"
         run: |
           docker image build -f Dockerfile-jfrog -t ${{env.RT_REPO_DOCKER_URL}} --platform "${{env.DOCKER_BUILDX_PLATFORMS}}" --metadata-file "${{env.DOCKER_METADATA_JSON}}" --push .
+          docker image build -f Dockerfile-jfrog --build-arg JAR_FILE=${{env.JAR_FILE}} -t ${{env.RT_REPO_DOCKER_URL}} --platform "${{env.DOCKER_BUILDX_PLATFORMS}}" --metadata-file "${{env.DOCKER_METADATA_JSON}}" --push .
+
 
       - name: "Optional: Docker pull image"
         run: |
