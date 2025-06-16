@@ -1,0 +1,371 @@
+name: "JF-CLI: JAVA"
+on:
+# TURN-OFF on every push 
+  push:
+    branches: 
+      - main
+permissions:
+  actions: read # for detecting the Github Actions environment.
+  id-token: write # for creating OIDC tokens for signing.
+  packages: write # for uploading attestations.
+  contents: read
+  security-events: write # Required for uploading code scanning.
+env:
+  JF_RT_URL: "https://psrbinstance2.jfrog.io"
+  BUILD_NAME: "spring-petclinic"
+  JOB_SUMMARY: false
+  JFROG_CLI_LOG_LEVEL: DEBUG # DEBUG, INFO, WARN, ERROR
+  JAVA_PROVIDER: 'corretto'
+  JAVA_VERSION: '17'
+  EVIDENCE_SPEC_JSON: 'evd-spec-info.json'  # ref https://jfrog.com/help/r/jfrog-artifactory-documentation/evidence-setup
+  RBv2_SPEC_JSON: "rbv2-spec-info.json"
+  RBV2_SIGNING_KEY: "varum" # ref https://jfrog.com/help/r/jfrog-artifactory-documentation/create-signing-keys-for-release-bundles-v2
+  DEFAULT_WORKSPACE: "${{github.workspace}}"  # /home/runner/work/spring-petclinic/spring-petclinic
+  RT_REPO_MVN_VIRTUAL: "rbv2merative-mvn-virtual"
+  RT_REPO_MVN_DEV_LOCAL: "rbv2merative-mvn-dev-local"
+  RT_REPO_DOCKER_VIRTUAL: "rbv2merative-docker-virtual"
+  RT_REPO_DOCKER_DEV_LOCAL: "rbv2merative-docker-dev-local"
+  JF_OIDC_PROVIDER_NAME: "krishnam-github-actions-jfcli"
+jobs:
+  dockerPackage:
+    name: "Docker"
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        java: [17]
+        include:
+          - language: ['java-kotlin']
+            build-mode: none 
+    env:  
+      DOCKER_BUILDX_PLATFORMS: 'linux/amd64,linux/arm64'
+      DOCKER_METADATA_JSON: 'build-metadata.json'
+      BUILD_ID: "dkr-${{github.run_number}}"
+    defaults:
+       run:
+         working-directory: "${{env.DEFAULT_WORKSPACE}}"
+
+    runs-on: ${{matrix.os}}
+    timeout-minutes: 30   # ref  https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#jobsjob_idtimeout-minutes
+    steps:
+      # Use the specific setup-cli branch. Ref https://github.com/marketplace/actions/setup-jfrog-cli
+      - name: "Setup JFrog CLI"
+        uses: jfrog/setup-jfrog-cli@v4
+        id: setup-cli
+        env:
+          JF_URL: ${{env.JF_RT_URL}}
+          JFROG_CLI_RELEASES_REPO: '${{env.JF_RT_URL}}/artifactory/${{env.RT_REPO_MVN_VIRTUAL}}' 
+          JFROG_CLI_EXTRACTORS_REMOTE: '${{env.JF_RT_URL}}/artifactory/${{env.RT_REPO_MVN_VIRTUAL}}'
+          JF_GIT_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          JFROG_CLI_LOG_LEVEL: ${{env.JFROG_CLI_LOG_LEVEL}}
+        with:
+          version: latest  #2.71.0
+          oidc-provider-name: ${{env.JF_OIDC_PROVIDER_NAME}}
+
+      - name: "Clone VCS"
+        uses: actions/checkout@v4 # ref: https://github.com/actions/checkout
+
+      - name: "Java provider = ${{env.JAVA_PROVIDER}} with ver = ${{env.JAVA_VERSION}}"
+        uses: actions/setup-java@v4   # ref https://github.com/actions/setup-java
+        with:
+          distribution: ${{env.JAVA_PROVIDER}} # corretto
+          java-version: ${{env.JAVA_VERSION}}  # 17
+          cache: 'maven'
+          cache-dependency-path: 'pom.xml'
+
+      - name: "Software version"
+        run: |
+          # JFrog CLI version
+          jf --version
+          # Ping the server
+          jf rt ping
+          # Java
+          java -version
+          # MVN
+          mvn -version
+          # Docker
+          docker -v
+          # Python
+          python3 -V
+          pip3 -V
+          # jf config
+          jf config show
+
+      - name: "Config jf with mvn repos"
+        run: |
+          jf mvnc --global --repo-resolve-releases ${{env.RT_REPO_MVN_VIRTUAL}} --repo-resolve-snapshots ${{env.RT_REPO_MVN_VIRTUAL}}
+
+      - name: "Create ENV variables"
+        run: |
+          echo "RT_REPO_DOCKER_URL=${{vars.JF_NAME}}.jfrog.io/${{env.RT_REPO_DOCKER_VIRTUAL}}/${{env.BUILD_NAME}}:${{env.BUILD_ID}}" >> $GITHUB_ENV
+
+      - name: "Docker authentication"  # ref https://github.com/marketplace/actions/docker-login
+        id: config-docker
+        uses: docker/login-action@v3
+        with: 
+          registry: ${{env.JF_RT_URL}}
+          username: ${{steps.setup-cli.outputs.oidc-user}}
+          password: ${{steps.setup-cli.outputs.oidc-token}}
+
+      - name: "Docker buildx instance"
+        uses: docker/setup-buildx-action@v3   # ref: https://github.com/marketplace/actions/docker-setup-buildx h
+        with:
+          use: true
+          platforms: ${{env.DOCKER_BUILDX_PLATFORMS}} # linux/amd64,linux/arm64 # ref: https://docs.docker.com/reference/cli/docker/buildx/create/#platform
+          install: true
+
+      - name: "list folder"
+        run: |
+          pwd  
+          tree .
+
+      - name: "Docker: Prestep Summary "
+        run: |
+          echo "# :frog: :ship: Docker: Prestep Summary :pushpin:" >> $GITHUB_STEP_SUMMARY
+          echo " " >> $GITHUB_STEP_SUMMARY
+          echo " " >> $GITHUB_STEP_SUMMARY
+          echo " - Installed JFrog CLI [$(jf --version)](https://jfrog.com/getcli/) and Java [${{env.JAVA_PROVIDER}}](https://github.com/actions/setup-java) v${{env.JAVA_VERSION}} " >> $GITHUB_STEP_SUMMARY
+          echo "    - $(jf --version) " >> $GITHUB_STEP_SUMMARY
+          echo "    - $(mvn -v) " >> $GITHUB_STEP_SUMMARY
+          echo "    - $(docker -v) " >> $GITHUB_STEP_SUMMARY
+          echo " - Docker buildx configured with platforms: [${{env.DOCKER_BUILDX_PLATFORMS}}](https://docs.docker.com/reference/cli/docker/buildx/create/#platform) " >> $GITHUB_STEP_SUMMARY
+          echo " - Configured the JFrog Cli and Docker login with SaaS Artifactory OIDC integration  " >> $GITHUB_STEP_SUMMARY
+          echo " " >> $GITHUB_STEP_SUMMARY
+          echo " - Variables info" >> $GITHUB_STEP_SUMMARY
+          echo "    - ID: ${{env.BUILD_ID}} " >> $GITHUB_STEP_SUMMARY
+          echo "    - Build Name: ${{env.BUILD_NAME}} " >> $GITHUB_STEP_SUMMARY
+          echo "    - Maven Repo URL: ${{env.RT_REPO_MVN_VIRTUAL}}" >> $GITHUB_STEP_SUMMARY
+          echo "    - Docker Repo URL: ${{env.RT_REPO_DOCKER_VIRTUAL}}" >> $GITHUB_STEP_SUMMARY
+          echo "    - Docker URL: ${{env.RT_REPO_DOCKER_URL}}" >> $GITHUB_STEP_SUMMARY
+          echo " " >> $GITHUB_STEP_SUMMARY
+
+
+      - name: "Package: Create MVN Build"
+          # jf mvn clean install -DskipTests=true -Denforcer.skip=true --build-name=${{env.BUILD_NAME}} --build-number=${{env.BUILD_ID}}
+        run: |     # -Djar.finalName=${{env.JAR_FINAL_NAME}} 
+          mvn clean install -DskipTests=true -Denforcer.skip=true
+
+      - name: "Package: Docker build and push"
+        run: |
+          docker image build -f Dockerfile-jfrog -t ${{env.RT_REPO_DOCKER_URL}} --platform "${{env.DOCKER_BUILDX_PLATFORMS}}" --metadata-file "${{env.DOCKER_METADATA_JSON}}" --push .
+
+      - name: "Optional: Docker pull image"
+        run: |
+          docker pull ${{env.RT_REPO_DOCKER_URL}}
+
+      - name: "Package: Docker image list"
+        run: |
+          docker image ls
+
+      # Build Info
+          # US 
+          #     Executive Order: 
+          #       https://www.whitehouse.gov/briefing-room/presidential-actions/2021/05/12/executive-order-on-improving-the-nations-cybersecurity/
+          #       https://www.nist.gov/itl/executive-order-14028-improving-nations-cybersecurity
+          #    US Dept of Commerce: https://www.ntia.gov/page/software-bill-materials
+          #    US Cyber Defence Agency: https://www.cisa.gov/sbom
+          #    NIST: https://www.nist.gov/itl/executive-order-14028-improving-nations-cybersecurity/software-security-supply-chains-software-1
+          #    NITA: https://www.ntia.gov/page/software-bill-materials 
+          #    Centers for Medicare & Medicaid Services: https://security.cms.gov/learn/software-bill-materials-sbom
+          # India
+          #    CERT-IN: https://www.cert-in.org.in/sbom/
+      - name: "BuildInfo: Collect env"
+        run: jf rt bce ${{env.BUILD_NAME}} ${{env.BUILD_ID}} 
+ 
+      - name: "BuildInfo: Add VCS info"
+        run: jf rt bag ${{env.BUILD_NAME}} ${{env.BUILD_ID}} 
+
+      - name: "BuildInfo: Docker build create"
+        run: |
+          imageDigest=$(cat "${{env.DOCKER_METADATA_JSON}}" | jq '.["containerimage.digest"]')
+          echo "${imageDigest}"
+
+          echo "${{env.RT_REPO_DOCKER_URL}}@${imageDigest}" > ${{env.DOCKER_METADATA_JSON}}
+
+          jf rt bdc ${{env.RT_REPO_DOCKER_VIRTUAL}} --image-file ${{env.DOCKER_METADATA_JSON}} --build-name=${{env.BUILD_NAME}} --build-number=${{env.BUILD_ID}}
+
+      - name: "BuildInfo: Build Publish"
+        run: jf rt bp ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --detailed-summary=true
+
+      # Release Bundle v2
+      - name: "RLM: RBv2 spec - create"
+        run: |
+          echo "{ \"files\": [ {\"build\": \"${{env.BUILD_NAME}}/${{env.BUILD_ID}}\" } ] }"  > ${{env.RBv2_SPEC_JSON}}
+          cat ${{env.RBv2_SPEC_JSON}}
+
+      - name: "RLM: RBv2 Create NEW"
+        run: |
+          jf rbc ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --sync=true --signing-key=${{env.RBV2_SIGNING_KEY}} --spec=${{env.RBv2_SPEC_JSON}}
+
+      - name: "RLM: RBv2 promote ${{env.RBv2_ENV_VAL}}"
+        env:
+            RBv2_ENV_VAL: "PROD"
+            PROD_REPO: "rbv2merative-docker-prod-local"
+        run: |
+          jf rbp ${{env.BUILD_NAME}} ${{env.BUILD_ID}} ${{env.RBv2_ENV_VAL}} --sync=true --signing-key=${{env.RBV2_SIGNING_KEY}} --include-repos="${{env.PROD_REPO}}" 
+
+      - name: "Optional: rbv2-summary"
+        continue-on-error: true 
+        env:
+          NAME_LINK: "${{env.JF_RT_URL}}/ui/artifactory/lifecycle/?bundleName=${{env.BUILD_NAME}}&bundleToFlash=${{env.BUILD_NAME}}&repositoryKey=release-bundles-v2&activeKanbanTab=promotion"
+          VER_LINK: "${{env.JF_RT_URL}}/ui/artifactory/lifecycle/?bundleName='${{env.BUILD_NAME}}'&bundleToFlash='${{env.BUILD_NAME}}'&releaseBundleVersion='${{env.BUILD_ID}}'&repositoryKey=release-bundles-v2&activeVersionTab=Version%20Timeline&activeKanbanTab=promotion"
+          CURL_URL: "${{env.JF_RT_URL}}/lifecycle/api/v2/promotion/records/${{env.BUILD_NAME}}/${{env.BUILD_ID}}?async=false"
+        run: |
+          echo "#📦 Release Bundle v2 Summary :rocket: " >> $GITHUB_STEP_SUMMARY
+          echo " " >> $GITHUB_STEP_SUMMARY
+          echo " " >> $GITHUB_STEP_SUMMARY
+          echo "The Build Artifacts has elevated to the subsequent stages" >> $GITHUB_STEP_SUMMARY
+          RB2_STATUS_RESP=$(curl -v -G ${{env.CURL_URL}} -H 'Content-Type:  application/json' -H "Authorization: Bearer ${{steps.setup-cli.outputs.oidc-token}}")
+          echo $RB2_STATUS_RESP > RBv2_STATUS-${{env.BUILD_ID}}.json
+          cat RBv2_STATUS-${{env.BUILD_ID}}.json 
+          items=$(echo "$RB2_STATUS_RESP" | jq -c -r '.promotions[]')
+          for item in ${items[@]}; do
+            envVal=$(echo $item | jq -r '.environment')
+            crtVal=$(echo $item | jq -r '.created')
+            echo " - ${envVal} on ${crtVal} " >> $GITHUB_STEP_SUMMARY
+          done
+          echo " " >> $GITHUB_STEP_SUMMARY
+          echo "  - Release bundle [${{env.BUILD_NAME}}](${{env.NAME_LINK}}):[${{env.BUILD_ID}}](${{env.VER_LINK}}) " >> $GITHUB_STEP_SUMMARY
+          echo " " >> $GITHUB_STEP_SUMMARY
+
+      # Query build 
+      - name: "Optional: Query build info"
+        env: 
+          BUILD_INFO_JSON: "BuildInfo-${{env.BUILD_ID}}.json"
+        run: |
+           jf rt curl "/api/build/${{env.BUILD_NAME}}/${{env.BUILD_ID}}" -o $BUILD_INFO_JSON
+           cat $BUILD_INFO_JSON
+
+  
+
+
+  mvnPackage:
+    name: "MVN Package"
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        java: [17]
+        include:
+          - language: ['java-kotlin']
+            build-mode: none 
+    env:  
+      JAVA_PROVIDER: 'corretto'
+      JAVA_VERSION: '17'
+      BUILD_ID: "mvn-${{github.run_number}}" # ref: https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/accessing-contextual-information-about-workflow-runs#github-context
+    runs-on: ${{matrix.os}}
+    timeout-minutes: 30   # ref  https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#jobsjob_idtimeout-minutes
+    defaults:
+       run:
+         working-directory: "${{env.DEFAULT_WORKSPACE}}"
+    steps:
+      - name: "Setup JFrog CLI"
+        uses: jfrog/setup-jfrog-cli@v4
+        id: setup-cli
+        env:
+          JF_URL: ${{env.JF_RT_URL}}
+          JFROG_CLI_LOG_LEVEL: ${{env.JFROG_CLI_LOG_LEVEL}}
+          JFROG_CLI_RELEASES_REPO: '${{env.JF_RT_URL}}/artifactory/${{env.RT_REPO_MVN_VIRTUAL}}' 
+          JFROG_CLI_EXTRACTORS_REMOTE: '${{env.JF_RT_URL}}/artifactory/${{env.RT_REPO_MVN_VIRTUAL}}'
+          JF_GIT_TOKEN: ${{secrets.GITHUB_TOKEN}}
+        with:
+          version: latest  #2.71.0
+          oidc-provider-name: ${{env.JF_OIDC_PROVIDER_NAME}}
+
+      - name: "Clone VCS"
+        uses: actions/checkout@v4 # ref: https://github.com/actions/checkout
+
+      - name: "Java provider = ${{env.JAVA_PROVIDER}} with ver = ${{env.JAVA_VERSION}} "
+        uses: actions/setup-java@v4   # ref https://github.com/actions/setup-java
+        with:
+          distribution: ${{env.JAVA_PROVIDER}} # corretto
+          java-version: ${{env.JAVA_VERSION}}  # 17
+          cache: 'maven'
+          cache-dependency-path: 'pom.xml'
+
+      - name: "Software version"
+        run: |
+          # JFrog CLI version
+          jf --version
+          # Ping the server
+          jf rt ping
+          # Java
+          java -version
+          # MVN
+          mvn -version
+          # Docker
+          docker -v
+          # Python
+          python3 -V
+          pip3 -V
+          # jf config
+          jf config show
+
+      - name: "Config jf with mvn repos"
+        run: |
+          export JFROG_CLI_LOG_LEVEL=${{env.JFROG_CLI_LOG_LEVEL}}
+          export JFROG_CLI_LOG_TIMESTAMP=DATE_AND_TIME
+
+          jf mvnc --global --repo-resolve-releases ${{env.RT_REPO_MVN_VIRTUAL}} --repo-resolve-snapshots ${{env.RT_REPO_MVN_VIRTUAL}}
+
+      - name: "list folder"
+        run: |
+          pwd
+          tree .
+
+      - name: "MVN: prestep-summary"
+        run: |
+          echo "# :frog: MVN: Prestep Summary :pushpin:" >> $GITHUB_STEP_SUMMARY
+          echo " " >> $GITHUB_STEP_SUMMARY
+          echo " " >> $GITHUB_STEP_SUMMARY
+          echo " - Installed JFrog CLI [$(jf --version)](https://jfrog.com/getcli/) and Java [${{env.JAVA_PROVIDER}}](https://github.com/actions/setup-java) v${{env.JAVA_VERSION}} " >> $GITHUB_STEP_SUMMARY
+          echo "    - $(jf --version) " >> $GITHUB_STEP_SUMMARY
+          echo "    - $(mvn -v) " >> $GITHUB_STEP_SUMMARY
+          echo " - Configured the JFrog Cli and Docker login with SaaS Artifactory OIDC integration  " >> $GITHUB_STEP_SUMMARY
+          echo " " >> $GITHUB_STEP_SUMMARY
+          echo " - Variables info" >> $GITHUB_STEP_SUMMARY
+          echo "    - ID: ${{env.BUILD_ID}} " >> $GITHUB_STEP_SUMMARY
+          echo "    - Build Name: ${{env.BUILD_NAME}} " >> $GITHUB_STEP_SUMMARY
+          echo "    - Maven Repo URL: ${{env.RT_REPO_MVN_VIRTUAL}}" >> $GITHUB_STEP_SUMMARY
+          echo " " >> $GITHUB_STEP_SUMMARY
+          # echo " - Evidence Info: " >> $GITHUB_STEP_SUMMARY
+
+      # Package
+      - name: "Package: Create MVN Build"
+        run: |     # -Djar.finalName=${{env.JAR_FINAL_NAME}} 
+          jf mvn clean install -DskipTests=true -Denforcer.skip=true --build-name=${{env.BUILD_NAME}} --build-number=${{env.BUILD_ID}}
+
+      # Build Info
+          # US 
+          #     Executive Order: 
+          #       https://www.whitehouse.gov/briefing-room/presidential-actions/2021/05/12/executive-order-on-improving-the-nations-cybersecurity/
+          #       https://www.nist.gov/itl/executive-order-14028-improving-nations-cybersecurity
+          #    US Dept of Commerce: https://www.ntia.gov/page/software-bill-materials
+          #    US Cyber Defence Agency: https://www.cisa.gov/sbom
+          #    NIST: https://www.nist.gov/itl/executive-order-14028-improving-nations-cybersecurity/software-security-supply-chains-software-1
+          #    NITA: https://www.ntia.gov/page/software-bill-materials 
+          #    Centers for Medicare & Medicaid Services: https://security.cms.gov/learn/software-bill-materials-sbom
+          # India
+          #    CERT-IN: https://www.cert-in.org.in/sbom/
+      - name: "BuildInfo: Collect env"
+        run: jf rt bce ${{env.BUILD_NAME}} ${{env.BUILD_ID}} 
+
+      - name: "BuildInfo: Build Publish"
+        run: jf rt bp ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --detailed-summary=true
+
+    # Release Bundle v2
+      - name: "RLM: RBv2 spec - create"
+        run: |
+            echo "{ \"files\": [ {\"build\": \"${{env.BUILD_NAME}}/${{env.BUILD_ID}}\" } ] }"  > ${{env.RBv2_SPEC_JSON}}
+            cat ${{env.RBv2_SPEC_JSON}}
+
+      - name: "RLM: RBv2 Create NEW"
+        run: |
+            jf rbc ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --sync=true --signing-key=${{env.RBV2_SIGNING_KEY}} --spec=${{env.RBv2_SPEC_JSON}}
+
+      - name: "RLM: RBv2 promote ${{env.RBv2_ENV_VAL}}"
+        env:
+            RBv2_ENV_VAL: "PROD"
+            PROD_REPO: "rbv2merative-docker-prod-local"
+        run: |
+            jf rbp ${{env.BUILD_NAME}} ${{env.BUILD_ID}} ${{env.RBv2_ENV_VAL}} --sync=true --signing-key=${{env.RBV2_SIGNING_KEY}} --include-repos="${{env.PROD_REPO}}" 
