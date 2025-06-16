@@ -11,6 +11,7 @@ permissions:
   contents: read
   security-events: write # Required for uploading code scanning.
 env:
+  JF_NAME: "psrbinstance2" # JFrog instance name
   JF_RT_URL: "https://psrbinstance2.jfrog.io"
   BUILD_NAME: "spring-petclinic"
   JOB_SUMMARY: false
@@ -19,7 +20,7 @@ env:
   JAVA_VERSION: '17'
   EVIDENCE_SPEC_JSON: 'evd-spec-info.json'  # ref https://jfrog.com/help/r/jfrog-artifactory-documentation/evidence-setup
   RBv2_SPEC_JSON: "rbv2-spec-info.json"
-  RBV2_SIGNING_KEY: "varum" # ref https://jfrog.com/help/r/jfrog-artifactory-documentation/create-signing-keys-for-release-bundles-v2
+  RBV2_SIGNING_KEY: "varunm" # ref https://jfrog.com/help/r/jfrog-artifactory-documentation/create-signing-keys-for-release-bundles-v2
   DEFAULT_WORKSPACE: "${{github.workspace}}"  # /home/runner/work/spring-petclinic/spring-petclinic
   RT_REPO_MVN_VIRTUAL: "rbv2merative-mvn-virtual"
   RT_REPO_MVN_DEV_LOCAL: "rbv2merative-mvn-dev-local"
@@ -97,7 +98,7 @@ jobs:
 
       - name: "Create ENV variables"
         run: |
-          echo "RT_REPO_DOCKER_URL=${{vars.JF_NAME}}.jfrog.io/${{env.RT_REPO_DOCKER_VIRTUAL}}/${{env.BUILD_NAME}}:${{env.BUILD_ID}}" >> $GITHUB_ENV
+          echo "RT_REPO_DOCKER_URL=${{env.JF_NAME}}.jfrog.io/${{env.RT_REPO_DOCKER_VIRTUAL}}/${{env.BUILD_NAME}}:${{env.BUILD_ID}}" >> $GITHUB_ENV
 
       - name: "Docker authentication"  # ref https://github.com/marketplace/actions/docker-login
         id: config-docker
