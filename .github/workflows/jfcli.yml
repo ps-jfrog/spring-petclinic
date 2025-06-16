@@ -13,7 +13,7 @@ permissions:
 env:
   JF_NAME: "psrbinstance2" # JFrog instance name
   JF_RT_URL: "https://psrbinstance2.jfrog.io"
-  BUILD_NAME: "spring-petclinic"
+  BUILD_NAME: "krishnam"
   JAR_VERSION: "3.5.0-SNAPSHOT"
   JOB_SUMMARY: false
   JFROG_CLI_LOG_LEVEL: DEBUG # DEBUG, INFO, WARN, ERROR
