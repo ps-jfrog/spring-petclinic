@@ -775,6 +775,8 @@ jobs:
 
       - name: "Convert Junit surefire XML reports to JSON format"
         run: |
+          pwd
+          ls -lR ${{env.JUNIT_TEST_RESULTS_JSON}}
           ./jfrog/convertXml2Json.sh ${{env.JUNIT_TEST_RESULTS_JSON}}
           cat ${{env.JUNIT_TEST_RESULTS_JSON}}
 
@@ -1377,7 +1379,7 @@ jobs:
           
           
   appTrustdockerPackage:
-    name: "AppTrustDocker"
+    name: "AppTrust: Docker Package"
     env:  
       BUILD_ID: "psj-at-dkr-${{github.run_number}}"
       RT_REPO_MVN_VIRTUAL: "krishna-apptrust-java-virtual"
@@ -1396,6 +1398,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30   # ref  https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#jobsjob_idtimeout-minutes
     steps:
+      - name: "Install prereqs tools"
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq yq
+
       # Use the specific setup-cli branch. Ref https://github.com/marketplace/actions/setup-jfrog-cli
       - name: "Setup JFrog CLI"
         uses: jfrog/setup-jfrog-cli@v4
