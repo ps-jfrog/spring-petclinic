@@ -58,23 +58,48 @@ echo "Deleting existing output file: $OUTPUT_FILE"
 rm -rf "$OUTPUT_FILE"
 echo "Output file deleted: $OUTPUT_FILE"
 
-echo "Processing XML files..."
+echo "Processing XML files... in folder: $REPORTS_DIR"
+tree $REPORTS_DIR
 for xml_file in "${XML_FILES[@]}"; do
     if [ ! -f "$xml_file" ]; then
         continue
     fi
     
     echo "Processing: $(basename "$xml_file")"
+    echo "DEBUG: Full path: $xml_file"
+    echo "DEBUG: File size: $(wc -c < "$xml_file") bytes"
+    echo "DEBUG: File exists check: $([ -f "$xml_file" ] && echo "YES" || echo "NO")"
     
     # Convert XML to JSON using yq
     # yq converts XML to JSON, and we use jq to extract and format the data
-    suite_json=$(yq -p=xml -o=json '.' "$xml_file" 2>/dev/null)
+    echo "DEBUG: Running yq conversion..."
+    suite_json=$(yq -p=xml -o=json '.' "$xml_file" 2>&1)
+    yq_exit_code=$?
+    echo "DEBUG: yq exit code: $yq_exit_code"
+    
+    if [ $yq_exit_code -ne 0 ]; then
+        echo "DEBUG: yq error output: $suite_json" >&2
+        suite_json=""
+    else
+        echo "DEBUG: yq conversion successful, JSON length: ${#suite_json} characters"
+        echo "DEBUG: First 200 chars of JSON: ${suite_json:0:200}..."
+    fi
     
     # Validate that we got valid JSON
-    if [ -z "$suite_json" ] || ! echo "$suite_json" | jq empty 2>/dev/null; then
+    echo "DEBUG: Validating JSON..."
+    if [ -z "$suite_json" ]; then
+        echo "DEBUG: suite_json is empty, skipping..." >&2
         echo "Warning: Failed to parse $xml_file or invalid JSON output, skipping..." >&2
         continue
     fi
+    
+    if ! echo "$suite_json" | jq empty 2>/dev/null; then
+        jq_error=$(echo "$suite_json" | jq empty 2>&1)
+        echo "DEBUG: jq validation failed: $jq_error" >&2
+        echo "Warning: Failed to parse $xml_file or invalid JSON output, skipping..." >&2
+        continue
+    fi
+    echo "DEBUG: JSON validation successful"
     
     # Extract suite information and test cases using a single jq call to get all values
     # yq outputs XML attributes with "+@" prefix, so we need to handle that
@@ -127,6 +152,7 @@ for xml_file in "${XML_FILES[@]}"; do
     }')
     
     # Extract individual values from suite_data
+    echo "DEBUG: Extracting suite data values..."
     suite_name=$(echo "$suite_data" | jq -r '.name')
     tests=$(echo "$suite_data" | jq -r '.tests')
     failures=$(echo "$suite_data" | jq -r '.failures')
@@ -134,6 +160,9 @@ for xml_file in "${XML_FILES[@]}"; do
     skipped=$(echo "$suite_data" | jq -r '.skipped')
     time=$(echo "$suite_data" | jq -r '.time')
     test_cases=$(echo "$suite_data" | jq -c '.testCases')
+    
+    echo "DEBUG: Extracted values - name: '$suite_name', tests: '$tests', failures: '$failures', errors: '$errors', skipped: '$skipped', time: '$time'"
+    echo "DEBUG: Test cases count: $(echo "$test_cases" | jq 'length')"
     
     # Create suite object using the extracted values
     suite_object=$(jq -n \
