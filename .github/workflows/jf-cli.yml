@@ -771,12 +771,16 @@ jobs:
 
       - name: "Package: Create MVN Build"
         run: |     # -Djar.finalName=${{env.JAR_FINAL_NAME}} 
-          jf mvn clean install -Denforcer.skip -f pom.xml --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}}
+          jf mvn clean install -DskipTests=true -Denforcer.skip=true -f pom.xml --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}}
+
+      - name: "Package: Junit tests"
+        run: |
+          jf mvn test -Denforcer.skip
+          pwd
+          tree ./target/
 
       - name: "Convert Junit surefire XML reports to JSON format"
         run: |
-          pwd
-          ls -lR ${{env.JUNIT_TEST_RESULTS_JSON}}
           ./jfrog/convertXml2Json.sh ${{env.JUNIT_TEST_RESULTS_JSON}}
           cat ${{env.JUNIT_TEST_RESULTS_JSON}}
 
