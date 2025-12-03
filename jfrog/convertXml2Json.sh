@@ -73,7 +73,10 @@ for xml_file in "${XML_FILES[@]}"; do
     # Convert XML to JSON using yq
     # yq converts XML to JSON, and we use jq to extract and format the data
     echo "DEBUG: Running yq conversion..."
+    echo "YQ version: $(yq --version)"
+    echo "JQ version: $(jq --version)"
     suite_json=$(yq -p=xml -o=json '.' "$xml_file" 2>&1)
+    echo "DEBUG: suite_json: $suite_json"
     yq_exit_code=$?
     echo "DEBUG: yq exit code: $yq_exit_code"
     
