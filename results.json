@@ -1,0 +1,608 @@
+{
+  "summary": {
+    "totalTests": 42,
+    "totalFailures": 0,
+    "totalErrors": 0,
+    "totalSkipped": 2,
+    "totalTime": 7.295
+  },
+  "suites": [
+    {
+      "name": "org.springframework.samples.petclinic.MySqlIntegrationTests",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 2,
+      "time": 0.001,
+      "testCases": [
+        {
+          "name": "testFindAll",
+          "classname": "org.springframework.samples.petclinic.MySqlIntegrationTests",
+          "time": 0.0,
+          "failure": null,
+          "error": null,
+          "skipped": "disabledWithoutDocker is true and Docker is not available"
+        },
+        {
+          "name": "testOwnerDetails",
+          "classname": "org.springframework.samples.petclinic.MySqlIntegrationTests",
+          "time": 0.0,
+          "failure": null,
+          "error": null,
+          "skipped": "disabledWithoutDocker is true and Docker is not available"
+        }
+      ]
+    },
+    {
+      "name": "org.springframework.samples.petclinic.PetClinicIntegrationTests",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.529,
+      "testCases": [
+        {
+          "name": "testFindAll",
+          "classname": "org.springframework.samples.petclinic.PetClinicIntegrationTests",
+          "time": 0.013,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        },
+        {
+          "name": "testOwnerDetails",
+          "classname": "org.springframework.samples.petclinic.PetClinicIntegrationTests",
+          "time": 0.028,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        }
+      ]
+    },
+    {
+      "name": "org.springframework.samples.petclinic.PostgresIntegrationTests",
+      "tests": 0,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.206,
+      "testCases": []
+    },
+    {
+      "name": "org.springframework.samples.petclinic.model.ValidatorTests",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.008,
+      "testCases": [
+        {
+          "name": "shouldNotValidateWhenFirstNameEmpty",
+          "classname": "org.springframework.samples.petclinic.model.ValidatorTests",
+          "time": 0.008,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        }
+      ]
+    },
+    {
+      "name": "org.springframework.samples.petclinic.owner.OwnerControllerTests",
+      "tests": 13,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.466,
+      "testCases": [
+        {
+          "name": "testProcessUpdateOwnerFormHasErrors",
+          "classname": "org.springframework.samples.petclinic.owner.OwnerControllerTests",
+          "time": 0.107,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        },
+        {
+          "name": "testProcessCreationFormSuccess",
+          "classname": "org.springframework.samples.petclinic.owner.OwnerControllerTests",
+          "time": 0.006,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        },
+        {
+          "name": "testInitFindForm",
+          "classname": "org.springframework.samples.petclinic.owner.OwnerControllerTests",
+          "time": 0.011,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        },
+        {
+          "name": "testShowOwner",
+          "classname": "org.springframework.samples.petclinic.owner.OwnerControllerTests",
+          "time": 0.026,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        },
+        {
+          "name": "testProcessUpdateOwnerFormWithIdMismatch",
+          "classname": "org.springframework.samples.petclinic.owner.OwnerControllerTests",
+          "time": 0.005,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        },
+        {
+          "name": "testInitUpdateOwnerForm",
+          "classname": "org.springframework.samples.petclinic.owner.OwnerControllerTests",
+          "time": 0.009,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        },
+        {
+          "name": "testInitCreationForm",
+          "classname": "org.springframework.samples.petclinic.owner.OwnerControllerTests",
+          "time": 0.008,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        },
+        {
+          "name": "testProcessFindFormByLastName",
+          "classname": "org.springframework.samples.petclinic.owner.OwnerControllerTests",
+          "time": 0.003,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        },
+        {
+          "name": "testProcessFindFormNoOwnersFound",
+          "classname": "org.springframework.samples.petclinic.owner.OwnerControllerTests",
+          "time": 0.008,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        },
+        {
+          "name": "testProcessFindFormSuccess",
+          "classname": "org.springframework.samples.petclinic.owner.OwnerControllerTests",
+          "time": 0.012,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        },
+        {
+          "name": "testProcessUpdateOwnerFormSuccess",
+          "classname": "org.springframework.samples.petclinic.owner.OwnerControllerTests",
+          "time": 0.004,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        },
+        {
+          "name": "testProcessCreationFormHasErrors",
+          "classname": "org.springframework.samples.petclinic.owner.OwnerControllerTests",
+          "time": 0.007,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        },
+        {
+          "name": "testProcessUpdateOwnerFormUnchangedSuccess",
+          "classname": "org.springframework.samples.petclinic.owner.OwnerControllerTests",
+          "time": 0.004,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        }
+      ]
+    },
+    {
+      "name": "org.springframework.samples.petclinic.owner.PetControllerTests",
+      "tests": 0,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.33,
+      "testCases": [
+        {
+          "name": "testProcessCreationFormSuccess",
+          "classname": "org.springframework.samples.petclinic.owner.PetControllerTests",
+          "time": 0.007,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        },
+        {
+          "name": "testProcessUpdateFormSuccess",
+          "classname": "org.springframework.samples.petclinic.owner.PetControllerTests",
+          "time": 0.005,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        },
+        {
+          "name": "testInitCreationForm",
+          "classname": "org.springframework.samples.petclinic.owner.PetControllerTests",
+          "time": 0.023,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        },
+        {
+          "name": "testProcessUpdateFormWithInvalidBirthDate",
+          "classname": "org.springframework.samples.petclinic.owner.PetControllerTests$ProcessUpdateFormHasErrors",
+          "time": 0.015,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        },
+        {
+          "name": "testProcessUpdateFormWithBlankName",
+          "classname": "org.springframework.samples.petclinic.owner.PetControllerTests$ProcessUpdateFormHasErrors",
+          "time": 0.012,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        },
+        {
+          "name": "testProcessCreationFormWithBlankName",
+          "classname": "org.springframework.samples.petclinic.owner.PetControllerTests$ProcessCreationFormHasErrors",
+          "time": 0.014,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        },
+        {
+          "name": "testInitUpdateForm",
+          "classname": "org.springframework.samples.petclinic.owner.PetControllerTests$ProcessCreationFormHasErrors",
+          "time": 0.011,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        },
+        {
+          "name": "testProcessCreationFormWithMissingPetType",
+          "classname": "org.springframework.samples.petclinic.owner.PetControllerTests$ProcessCreationFormHasErrors",
+          "time": 0.011,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        },
+        {
+          "name": "testProcessCreationFormWithDuplicateName",
+          "classname": "org.springframework.samples.petclinic.owner.PetControllerTests$ProcessCreationFormHasErrors",
+          "time": 0.01,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        },
+        {
+          "name": "testProcessCreationFormWithInvalidBirthDate",
+          "classname": "org.springframework.samples.petclinic.owner.PetControllerTests$ProcessCreationFormHasErrors",
+          "time": 0.011,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        }
+      ]
+    },
+    {
+      "name": "org.springframework.samples.petclinic.owner.PetTypeFormatterTests",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.005,
+      "testCases": [
+        {
+          "name": "shouldThrowParseException",
+          "classname": "org.springframework.samples.petclinic.owner.PetTypeFormatterTests",
+          "time": 0.003,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        },
+        {
+          "name": "testPrint",
+          "classname": "org.springframework.samples.petclinic.owner.PetTypeFormatterTests",
+          "time": 0.001,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        },
+        {
+          "name": "shouldParse",
+          "classname": "org.springframework.samples.petclinic.owner.PetTypeFormatterTests",
+          "time": 0.0,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        }
+      ]
+    },
+    {
+      "name": "org.springframework.samples.petclinic.owner.PetValidatorTests",
+      "tests": 0,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.017,
+      "testCases": [
+        {
+          "name": "testValidate",
+          "classname": "org.springframework.samples.petclinic.owner.PetValidatorTests",
+          "time": 0.013,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        },
+        {
+          "name": "testValidateWithInvalidPetName",
+          "classname": "org.springframework.samples.petclinic.owner.PetValidatorTests$ValidateHasErrors",
+          "time": 0.001,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        },
+        {
+          "name": "testValidateWithInvalidPetType",
+          "classname": "org.springframework.samples.petclinic.owner.PetValidatorTests$ValidateHasErrors",
+          "time": 0.0,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        },
+        {
+          "name": "testValidateWithInvalidBirthDate",
+          "classname": "org.springframework.samples.petclinic.owner.PetValidatorTests$ValidateHasErrors",
+          "time": 0.0,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        }
+      ]
+    },
+    {
+      "name": "org.springframework.samples.petclinic.owner.VisitControllerTests",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.147,
+      "testCases": [
+        {
+          "name": "testProcessNewVisitFormHasErrors",
+          "classname": "org.springframework.samples.petclinic.owner.VisitControllerTests",
+          "time": 0.025,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        },
+        {
+          "name": "testProcessNewVisitFormSuccess",
+          "classname": "org.springframework.samples.petclinic.owner.VisitControllerTests",
+          "time": 0.004,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        },
+        {
+          "name": "testInitNewVisitForm",
+          "classname": "org.springframework.samples.petclinic.owner.VisitControllerTests",
+          "time": 0.006,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        }
+      ]
+    },
+    {
+      "name": "org.springframework.samples.petclinic.service.ClinicServiceTests",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 1.786,
+      "testCases": [
+        {
+          "name": "shouldFindVets",
+          "classname": "org.springframework.samples.petclinic.service.ClinicServiceTests",
+          "time": 0.094,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        },
+        {
+          "name": "shouldFindOwnersByLastName",
+          "classname": "org.springframework.samples.petclinic.service.ClinicServiceTests",
+          "time": 0.043,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        },
+        {
+          "name": "shouldAddNewVisitForPet",
+          "classname": "org.springframework.samples.petclinic.service.ClinicServiceTests",
+          "time": 0.021,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        },
+        {
+          "name": "shouldUpdateOwner",
+          "classname": "org.springframework.samples.petclinic.service.ClinicServiceTests",
+          "time": 0.004,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        },
+        {
+          "name": "shouldFindVisitsByPetId",
+          "classname": "org.springframework.samples.petclinic.service.ClinicServiceTests",
+          "time": 0.006,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        },
+        {
+          "name": "shouldInsertPetIntoDatabaseAndGenerateId",
+          "classname": "org.springframework.samples.petclinic.service.ClinicServiceTests",
+          "time": 0.01,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        },
+        {
+          "name": "shouldInsertOwner",
+          "classname": "org.springframework.samples.petclinic.service.ClinicServiceTests",
+          "time": 0.006,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        },
+        {
+          "name": "shouldFindSingleOwnerWithPet",
+          "classname": "org.springframework.samples.petclinic.service.ClinicServiceTests",
+          "time": 0.004,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        },
+        {
+          "name": "shouldUpdatePetName",
+          "classname": "org.springframework.samples.petclinic.service.ClinicServiceTests",
+          "time": 0.004,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        },
+        {
+          "name": "shouldFindAllPetTypes",
+          "classname": "org.springframework.samples.petclinic.service.ClinicServiceTests",
+          "time": 0.002,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        }
+      ]
+    },
+    {
+      "name": "org.springframework.samples.petclinic.system.CrashControllerIntegrationTests",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 1.057,
+      "testCases": [
+        {
+          "name": "testTriggerExceptionHtml",
+          "classname": "org.springframework.samples.petclinic.system.CrashControllerIntegrationTests",
+          "time": 0.15,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        },
+        {
+          "name": "testTriggerExceptionJson",
+          "classname": "org.springframework.samples.petclinic.system.CrashControllerIntegrationTests",
+          "time": 0.03,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        }
+      ]
+    },
+    {
+      "name": "org.springframework.samples.petclinic.system.CrashControllerTests",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.003,
+      "testCases": [
+        {
+          "name": "testTriggerException",
+          "classname": "org.springframework.samples.petclinic.system.CrashControllerTests",
+          "time": 0.003,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        }
+      ]
+    },
+    {
+      "name": "org.springframework.samples.petclinic.system.I18nPropertiesSyncTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.016,
+      "testCases": [
+        {
+          "name": "checkNonInternationalizedStrings",
+          "classname": "org.springframework.samples.petclinic.system.I18nPropertiesSyncTest",
+          "time": 0.011,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        },
+        {
+          "name": "checkI18nPropertyFilesAreInSync",
+          "classname": "org.springframework.samples.petclinic.system.I18nPropertiesSyncTest",
+          "time": 0.003,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        }
+      ]
+    },
+    {
+      "name": "org.springframework.samples.petclinic.vet.VetControllerTests",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 2.658,
+      "testCases": [
+        {
+          "name": "testShowVetListHtml",
+          "classname": "org.springframework.samples.petclinic.vet.VetControllerTests",
+          "time": 0.591,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        },
+        {
+          "name": "testShowResourcesVetList",
+          "classname": "org.springframework.samples.petclinic.vet.VetControllerTests",
+          "time": 0.086,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        }
+      ]
+    },
+    {
+      "name": "org.springframework.samples.petclinic.vet.VetTests",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.066,
+      "testCases": [
+        {
+          "name": "testSerialization",
+          "classname": "org.springframework.samples.petclinic.vet.VetTests",
+          "time": 0.065,
+          "failure": null,
+          "error": null,
+          "skipped": null
+        }
+      ]
+    }
+  ]
+}
