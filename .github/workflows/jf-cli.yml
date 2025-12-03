@@ -685,7 +685,12 @@ jobs:
       - name: "Install prereqs tools"
         run: |
           sudo apt-get update
-          sudo apt-get install -y jq yq
+          sudo apt-get install -y jq 
+          sudo apt-get install -y yq
+          sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/local/bin/yq
+          sudo chmod +x /usr/local/bin/yq 
+          yq --version
+          jq --version
 
       - name: "Setup JFrog CLI"
         uses: jfrog/setup-jfrog-cli@v4
@@ -781,6 +786,9 @@ jobs:
 
       - name: "Convert Junit surefire XML reports to JSON format"
         run: |
+          chmod +x ./jfrog/convertXml2Json.sh
+          chmod +x ./target/surefire-reports/
+
           ./jfrog/convertXml2Json.sh ${{env.JUNIT_TEST_RESULTS_JSON}}
           cat ${{env.JUNIT_TEST_RESULTS_JSON}}
 
