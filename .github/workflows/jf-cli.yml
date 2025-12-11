@@ -46,6 +46,10 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y jq yq
+          sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/local/bin/yq
+          sudo chmod +x /usr/local/bin/yq 
+          yq --version
+          jq --version
 
       # Use the specific setup-cli branch. Ref https://github.com/marketplace/actions/setup-jfrog-cli
       - name: "Setup JFrog CLI"
@@ -685,8 +689,7 @@ jobs:
       - name: "Install prereqs tools"
         run: |
           sudo apt-get update
-          sudo apt-get install -y jq 
-          sudo apt-get install -y yq
+          sudo apt-get install -y jq yq
           sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/local/bin/yq
           sudo chmod +x /usr/local/bin/yq 
           yq --version
@@ -837,7 +840,7 @@ jobs:
       - name: "Evidence: Junit Tests results"
         continue-on-error: true 
         run: |
-          jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.JUNIT_TEST_RESULTS_JSON}} --predicate-type https://jfrog.com/evidence/signature/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}}
+          jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.JUNIT_TEST_RESULTS_JSON}} --predicate-type https://jfrog.com/evidence/test-results/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}}
 
       # - name: "Evidence: Build Publish"
       #   # continue-on-error: true 
@@ -1414,6 +1417,10 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y jq yq
+          sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/local/bin/yq
+          sudo chmod +x /usr/local/bin/yq 
+          yq --version
+          jq --version
 
       # Use the specific setup-cli branch. Ref https://github.com/marketplace/actions/setup-jfrog-cli
       - name: "Setup JFrog CLI"
@@ -1575,7 +1582,7 @@ jobs:
         env:
             EVD_JSON: "target/surefire-reports/TEST-*.xml"
         run: |
-          jf evd create --package-name ${{env.BUILD_NAME}} --package-version ${{env.BUILD_ID}} --package-repo-name ${{env.RT_REPO_MVN_VIRTUAL}} --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}"  --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --predicate ./${{env.EVD_JSON}} --predicate-type https://jfrog.com/evidence/signature/v1
+          jf evd create --package-name ${{env.BUILD_NAME}} --package-version ${{env.BUILD_ID}} --package-repo-name ${{env.RT_REPO_MVN_VIRTUAL}} --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}"  --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --predicate ./${{env.EVD_JSON}} --predicate-type https://jfrog.com/evidence/test-results/v1
 
           
       - name: "Package: Xray - docker Artifact scan"
@@ -1628,7 +1635,7 @@ jobs:
       #     Docs# https://jfrog.com/help/r/jfrog-artifactory-documentation/evidence-management
       #     CLI# https://docs.jfrog-applications.jfrog.io/jfrog-applications/jfrog-cli/binaries-management-with-jfrog-artifactory/evidence-service
       - name: "Evidence: Build Publish"
-        # continue-on-error: true 
+        continue-on-error: true 
         run: |
           echo '{ "actor": "${{github.actor}}", "pipeline": "github actions","build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence-BuildPublish"}' > ./${{env.EVIDENCE_SPEC_JSON}}
           cat ./${{env.EVIDENCE_SPEC_JSON}}
@@ -1637,15 +1644,18 @@ jobs:
 
       # curl -L 'https://psazuse.jfrog.io/xray/api/v1/binMgr/builds' -H 'Content-Type: application/json' -H 'Authorization: ••••••' -d '{  "names": ["spring-petclinic"] }'
       - name: "Optional: Add Builds to Indexing Configuration"
+        continue-on-error: true 
         run: |
           jf xr curl "/api/v1/binMgr/builds" -H 'Content-Type: application/json' -d '{"names": ["${{env.BUILD_NAME}}"] }'
       # Set properties      
       - name: "Optional: Set prop for Artifact"  # These properties were captured Artifacts >> repo path 'spring-petclinic.---.jar' >> Properties
+        continue-on-error: true 
         run: |
           ts="cmd.$(date '+%Y-%m-%d-%H-%M')" 
           jf rt sp "job=github-action;env=demo;org=ps;team=arch;pack_cat=webapp;build=maven;product=artifactory;features=package,buildinfo;ts=ts-${BUILD_ID}" --build="${{env.BUILD_NAME}}/${{env.BUILD_ID}}"
 
       - name: "Optional: Query build info"
+        continue-on-error: true 
         env: 
           BUILD_INFO_JSON: "BuildInfo-${{env.BUILD_ID}}.json"
         run: |
@@ -1653,6 +1663,7 @@ jobs:
            cat $BUILD_INFO_JSON
 
       - name: "Sleep for few seconds"
+        continue-on-error: true 
         env: 
           SLEEP_TIME: 30
         run: |
@@ -1661,6 +1672,7 @@ jobs:
            echo "Awake now!"
 
       - name: "Optional: Query - Build Scan status"
+        continue-on-error: true 
         run: |
           jf xr curl "/api/v1/build/status" -H 'Content-Type: application/json' -d '{"name": "${{env.BUILD_NAME}}", "number": "${{env.BUILD_ID}}" }'
  
@@ -1668,6 +1680,7 @@ jobs:
       # MVN plugin '<artifactId>cyclonedx-maven-plugin</artifactId>' is used to generate SBOM information in the CycloneDX format# target/classes/META-INF/sbom/application.cdx.json
       # ref https://spring.io/blog/2024/05/24/sbom-support-in-spring-boot-3-3
       - name: "Optional: Xray sbom-enrich" 
+        continue-on-error: true 
         run: |
           jf se "target/classes/META-INF/sbom/application.cdx.json" --threads=100
 
@@ -1678,7 +1691,7 @@ jobs:
           jf bs ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --fail=false --format=table --extended-table=true --rescan=false --vuln=true --project=${{env.PROJECT_KEY_APP_TRUST}}
 
       - name: "Optional: Build Scan V2"  # https://jfrog.com/help/r/xray-rest-apis/scan-build-v2
-        # jf xr curl /api/v2/ci/build -H 'Content-Type: application/json' -d '{"build_name": "spring-petclinic", "build_number": "ga-gdl-xray-50","rescan":true }'
+        continue-on-error: true 
         run: |
           jf xr curl /api/v2/ci/build -H 'Content-Type: application/json' -d '{"build_name": "${{env.BUILD_NAME}}", "build_number": "${{env.BUILD_ID}}","rescan":false  }'
 
@@ -1693,6 +1706,7 @@ jobs:
           jf rbc ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --sync=true --signing-key=${{secrets.RBV2_SIGNING_KEY}} --spec=${{env.RBv2_SPEC_JSON}}  --project=${{env.PROJECT_KEY_APP_TRUST}}
 
       - name: "RLM: Xray Indexing"
+        continue-on-error: true 
         run: |
             jf xr curl "/api/v1/binMgr/release_bundle_v2" -H 'Content-Type: application/json' -d "{\"names\": [\"${{env.BUILD_NAME}}\"] }"
 
@@ -1700,7 +1714,7 @@ jobs:
       #     Docs# https://jfrog.com/help/r/jfrog-artifactory-documentation/evidence-management
       #     CLI# https://docs.jfrog-applications.jfrog.io/jfrog-applications/jfrog-cli/binaries-management-with-jfrog-artifactory/evidence-service
       - name: "Evidence: RBv2 state NEW"
-        # continue-on-error: true 
+        continue-on-error: true 
         env:
           # https://psazuse.jfrog.io/ui/artifactory/lifecycle/?bundleName=spring-petclinic&bundleToFlash=spring-petclinic&repositoryKey=release-bundles-v2&activeKanbanTab=promotion
           NAME_LINK: "${{env.JF_RT_URL}}/ui/artifactory/lifecycle/?bundleName=${{env.BUILD_NAME}}&bundleToFlash=${{env.BUILD_NAME}}&repositoryKey=release-bundles-v2&activeKanbanTab=promotion"
