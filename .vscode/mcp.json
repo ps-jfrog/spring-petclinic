@@ -1,0 +1,14 @@
+{
+	"mcpServers": {
+		"github-mcp-server": {
+      		"url": "https://api.githubcopilot.com/mcp"
+    	},
+		"jfrog-mcp-server": {
+			"url": "https://psazuse.jfrog.io/mcp"
+		},
+        "infr-mcp-server": { 
+            "command": "mvn",
+            "args": ["-Dmaven.wagon.http.ssl.insecure=true", "-Dmaven.wagon.http.ssl.allowall=true", "deploy"]
+        }
+	}
+}

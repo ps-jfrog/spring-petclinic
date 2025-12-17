@@ -39,8 +39,8 @@ out/
 /nbdist/
 /.nb-gradle/
 
-### VS Code ###
-.vscode/
+/.github/workflows/jfcli-apptrust.yml
+/jfrog/*.json
 
 ### CSS ###
 _site/
