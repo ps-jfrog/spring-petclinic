@@ -180,9 +180,6 @@ jobs:
     name: "Scam Report: FrogBot"
     needs: [jfrog-bot-scan]
     runs-on: ubuntu-latest
-    defaults:
-       run:
-         working-directory: "${{env.DEFAULT_WORKSPACE}}"
     steps:
       - name: "Setup JFrog CLI"
         uses: jfrog/setup-jfrog-cli@v4
