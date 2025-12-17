@@ -8,7 +8,10 @@ permissions:
   # [Mandatory If using OIDC authentication protocol instead of JF_ACCESS_TOKEN]
   id-token: write
 env:
+  JF_RT_URL: "https://${{vars.JF_NAME}}.jfrog.io"
   BUILD_ID: ${{ github.run_number }}
+  JOB_SUMMARY: false
+  JFROG_CLI_LOG_LEVEL: DEBUG 
 jobs:
   jfrog-bot-scan:
     runs-on: ubuntu-latest
@@ -180,6 +183,9 @@ jobs:
     name: "Scam Report: FrogBot"
     needs: [jfrog-bot-scan]
     runs-on: ubuntu-latest
+    defaults:
+       run:
+         working-directory: ${{github.workspace}}
     steps:
       - name: "Setup JFrog CLI"
         uses: jfrog/setup-jfrog-cli@v4
@@ -195,10 +201,19 @@ jobs:
       - name: "Clone VCS"
         uses: actions/checkout@v4 # ref: https://github.com/actions/checkout
 
+      - name: "Get commit hash"
+        # "${{github.workspace}}"  # /home/runner/work/spring-petclinic/spring-petclinic
+        run: |
+          pwd
+          ls -lart
+          export COMMIT_HASH=$(git rev-parse HEAD)
+          echo "COMMIT_HASH=$(COMMIT_HASH)" >> $GITHUB_ENV
+
       - name: "Report: FrogBot"
         env:
-          GIT_REPO_URL: "/api/v1/git/repositories"
+          GIT_REPO_URL: "/api/v1/git/repositories/60/commits/${{env.COMMIT_HASH}}/scan-results"
           GIT_REPO_JSON: "gitrepo-scan-${{env.BUILD_ID}}.json"
         run: |
           jf xr curl $GIT_REPO_URL -H 'Content-Type: application/json' -o $GIT_REPO_JSON
           cat $GIT_REPO_JSON
+

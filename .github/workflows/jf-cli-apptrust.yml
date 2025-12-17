@@ -26,10 +26,10 @@ jobs:
     name: "Docker"
     env:  
       BUILD_ID: "psj-at-dkr-${{github.run_number}}"
-      RT_REPO_MVN_VIRTUAL: "${{env.PROJECT_KEY}}-java-virtual" # "krishna-apptrust-java-virtual"
+      RT_REPO_MVN_VIRTUAL: "krishna-apptrust-java-virtual" #"${{env.PROJECT_KEY}}-java-virtual" # "krishna-apptrust-java-virtual"
       # RT_REPO_MVN_DEFAULT_LOCAL: "krishna-apptrust-java-init-local"  # krishna-apptrust-java-dev-local, krishna-apptrust-java-qa-local, krishna-apptrust-java-prod-local
-      RT_REPO_DOCKER_VIRTUAL:  "${{env.PROJECT_KEY}}-docker-virtual" # "krishna-apptrust-docker-virtual"
-      RT_REPO_DOCKER_DEFAULT_LOCAL: "${{env.PROJECT_KEY}}-docker-init-local"  # "krishna-apptrust-docker-init-local"
+      RT_REPO_DOCKER_VIRTUAL: "krishna-apptrust-docker-virtual" # "${{env.PROJECT_KEY}}-docker-virtual" # "krishna-apptrust-docker-virtual"
+      RT_REPO_DOCKER_DEFAULT_LOCAL: "krishna-apptrust-docker-init-local" # "${{env.PROJECT_KEY}}-docker-init-local"  # "krishna-apptrust-docker-init-local"
       # krishna-apptrust-docker-dev-local, krishna-apptrust-docker-qa-local, krishna-apptrust-docker-prod-local
       DOCKER_BUILDX_PLATFORMS: 'linux/amd64,linux/arm64'
       DOCKER_METADATA_JSON: 'build-metadata.json'
@@ -345,9 +345,9 @@ jobs:
     env:
       RBv2_ENV_VAL: "DEV"
       BUILD_ID: "psj-at-dkr-${{github.run_number}}"
-      RT_REPO_DEV_LOCAL: "${{env.PROJECT_KEY}}-docker-dev-local"
+      RT_REPO_DEV_LOCAL: "krishna-apptrust-docker-dev-local" # "${{env.PROJECT_KEY}}-docker-dev-local"
       # krishna-apptrust-docker-dev-local, krishna-apptrust-docker-qa-local, krishna-apptrust-docker-prod-local
-      TYPE_PROMOTE: "COPY"
+      TYPE_PROMOTE: "MOVE" # COPY, MOVE
     defaults:
        run:
          working-directory: "${{env.DEFAULT_WORKSPACE}}"
