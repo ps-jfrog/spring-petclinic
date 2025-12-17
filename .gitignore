@@ -39,7 +39,6 @@ out/
 /nbdist/
 /.nb-gradle/
 
-/.github/workflows/jfcli-apptrust.yml
 /jfrog/*.json
 
 ### CSS ###
