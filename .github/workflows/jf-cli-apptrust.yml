@@ -311,7 +311,7 @@ jobs:
       # Release Bundle v2
       - name: "RLM: RBv2 spec - create"
         run: |
-          echo "{ \"files\": [ {\"build\": \"${{env.BUILD_NAME}}/${{env.BUILD_ID}}\", \"includeDeps\":\"true\"} ] }"  > ${{env.RBv2_SPEC_JSON}}
+          echo "{ \"files\": [ {\"build\": \"${{env.BUILD_NAME}}/${{env.BUILD_ID}}\"} ] }"  > ${{env.RBv2_SPEC_JSON}}
 
       - name: "RLM: RBv2 Create NEW"
         run: |

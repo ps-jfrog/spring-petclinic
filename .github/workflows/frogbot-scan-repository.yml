@@ -212,9 +212,9 @@ jobs:
 
       - name: "Report: FrogBot"
         env:
-          GIT_REPO_URL: "/api/v1/git/repositories/60/commits/${{env.COMMIT_HASH}}/scan-results"
+          GIT_REPO_URL: "/api/v1/git/repositories/60/commits"
           GIT_REPO_JSON: "gitrepo-scan-${{env.BUILD_ID}}.json"
         run: |
-          jf xr curl $GIT_REPO_URL -H 'Content-Type: application/json' -o $GIT_REPO_JSON
+          jf xr curl "${{env.GIT_REPO_URL}}/${{env.COMMIT_HASH}}/scan-results" -H 'Content-Type: application/json' -o $GIT_REPO_JSON
           cat $GIT_REPO_JSON
 
