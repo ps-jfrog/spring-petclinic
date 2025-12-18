@@ -207,6 +207,7 @@ jobs:
           pwd
           ls -lart
           export COMMIT_HASH=$(git rev-parse HEAD)
+          echo "COMMIT_HASH: $COMMIT_HASH"
           echo "COMMIT_HASH=$(COMMIT_HASH)" >> $GITHUB_ENV
 
       - name: "Report: FrogBot"

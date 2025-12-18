@@ -10,7 +10,7 @@ permissions:
 env:
   JF_RT_URL: "https://${{vars.JF_NAME}}.jfrog.io"
   PROJECT_KEY: "krishna-apptrust"
-  BUILD_NAME: "AppTrust-spring-petclinic" # spring-petclinic-3.5.0-SNAPSHOT.jar
+  BUILD_NAME: "apptrust-spring-petclinic" # spring-petclinic-3.5.0-SNAPSHOT.jar
   JOB_SUMMARY: false
   JFROG_CLI_LOG_LEVEL: DEBUG # DEBUG, INFO, WARN, ERROR
   JAVA_DISTRIBUTION: 'temurin'
@@ -106,7 +106,6 @@ jobs:
           echo "JF_REGISTRY=${{env.JF_RT_URL}}/${{env.RT_REPO_DOCKER_VIRTUAL}}" >> $GITHUB_ENV
           echo "RT_REPO_DOCKER_URL=${{vars.JF_NAME}}.jfrog.io/${{env.RT_REPO_DOCKER_VIRTUAL}}/${{env.BUILD_NAME}}:${{env.BUILD_ID}}" >> $GITHUB_ENV
 
-
       - name: "Docker authentication"  # ref https://github.com/marketplace/actions/docker-login
         id: config-docker
         uses: docker/login-action@v3
@@ -178,9 +177,9 @@ jobs:
       - name: "Package: Docker build and push"
         env:
           JAR_FILE: "./target/${{env.ARTIFACT_NAME}}-${{env.ARTIFACT_VERSION}}.jar"
-          TAG10: "${{vars.JF_NAME}}.jfrog.io/${{env.RT_REPO_DOCKER_VIRTUAL}}/${{env.ARTIFACT_NAME}}:${{env.ARTIFACT_VERSION}}"
-          TAG11: "${{vars.JF_NAME}}.jfrog.io/${{env.RT_REPO_DOCKER_VIRTUAL}}/${{env.ARTIFACT_NAME}}:${{env.TODAYS_DATE}}" 
-          TAG12: "${{vars.JF_NAME}}.jfrog.io/${{env.RT_REPO_DOCKER_VIRTUAL}}/${{env.ARTIFACT_NAME}}:${{env.BUILD_ID}}"
+          TAG10: "${{vars.JF_NAME}}.jfrog.io/${{env.RT_REPO_DOCKER_VIRTUAL}}/${{env.BUILD_NAME}}:${{env.ARTIFACT_VERSION}}"
+          TAG11: "${{vars.JF_NAME}}.jfrog.io/${{env.RT_REPO_DOCKER_VIRTUAL}}/${{env.BUILD_NAME}}:${{env.TODAYS_DATE}}" 
+          TAG12: "${{vars.JF_NAME}}.jfrog.io/${{env.RT_REPO_DOCKER_VIRTUAL}}/${{env.BUILD_NAME}}:${{env.BUILD_ID}}"
           TAG13: "${{vars.JF_NAME}}.jfrog.io/${{env.RT_REPO_DOCKER_VIRTUAL}}/${{env.ARTIFACT_NAME}}:latest"
         run: |
           docker image build -f ./jfrog/AppTrustDockerfile --build-arg JAR_FILE=${{env.JAR_FILE}}  --platform "${{env.DOCKER_BUILDX_PLATFORMS}}" --metadata-file "${{env.DOCKER_METADATA_JSON}}" --push . -t ${{env.TAG10}} -t ${{env.TAG11}} -t ${{env.TAG12}}  -t ${{env.TAG13}}
