@@ -1395,7 +1395,7 @@ jobs:
           
   report-XrayScan:
     name: "Report: Xray Scan"
-    needs: [gradlePackage, mvnDownloadRBv2FromSaasEdge, mvnDownloadRBv2FromSaasSolEng, dockerDownloadRBv2FromSaasEdge, dockerDownloadRBv2FromSaasSolEng]
+    needs: [mvnDownloadRBv2FromSaasEdge, mvnDownloadRBv2FromSaasSolEng, dockerDownloadRBv2FromSaasEdge, dockerDownloadRBv2FromSaasSolEng]
     runs-on: ubuntu-latest
     env:
       MVN_BUILD_ID: "psj-mvn-${{github.run_number}}"

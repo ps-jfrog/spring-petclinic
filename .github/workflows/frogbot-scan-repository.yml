@@ -187,6 +187,15 @@ jobs:
        run:
          working-directory: ${{github.workspace}}
     steps:
+      - name: "Install prereqs tools"
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq yq
+          sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/local/bin/yq
+          sudo chmod +x /usr/local/bin/yq 
+          yq --version
+          jq --version
+          
       - name: "Setup JFrog CLI"
         uses: jfrog/setup-jfrog-cli@v4
         id: setup-cli
@@ -209,6 +218,19 @@ jobs:
           export COMMIT_HASH=$(git rev-parse HEAD)
           echo "COMMIT_HASH: $COMMIT_HASH"
 
-          jf xr curl "${{env.GIT_REPO_URL}}/$(git rev-parse HEAD)/scan-results" -H 'Content-Type: application/json' -o $GIT_REPO_JSON
+          jf xr curl "${{env.GIT_REPO_URL}}/$(git rev-parse HEAD)/scan-results?branch_name=main" -H 'Content-Type: application/json' -o $GIT_REPO_JSON
           cat $GIT_REPO_JSON
 
+          commit_hash=$(cat $GIT_REPO_JSON | jq -r '.commit_hash')
+          scan_results=$(cat $GIT_REPO_JSON | jq -r '.scan_results')
+          echo "scan_results: $scan_results"
+          if [ "$scan_results" == "null" ]; then
+            echo "No scan results found"
+          else
+            echo "Scan results found"
+
+            echo "$scan_results" >> $GITHUB_STEP_SUMMARY
+
+          fi
+
+          
