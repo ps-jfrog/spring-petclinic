@@ -200,21 +200,15 @@ jobs:
 
       - name: "Clone VCS"
         uses: actions/checkout@v4 # ref: https://github.com/actions/checkout
-
-      - name: "Get commit hash"
-        # "${{github.workspace}}"  # /home/runner/work/spring-petclinic/spring-petclinic
-        run: |
-          pwd
-          ls -lart
-          export COMMIT_HASH=$(git rev-parse HEAD)
-          echo "COMMIT_HASH: $COMMIT_HASH"
-          echo "COMMIT_HASH=$(COMMIT_HASH)" >> $GITHUB_ENV
-
+          
       - name: "Report: FrogBot"
         env:
           GIT_REPO_URL: "/api/v1/git/repositories/60/commits"
           GIT_REPO_JSON: "gitrepo-scan-${{env.BUILD_ID}}.json"
         run: |
-          jf xr curl "${{env.GIT_REPO_URL}}/${{env.COMMIT_HASH}}/scan-results" -H 'Content-Type: application/json' -o $GIT_REPO_JSON
+          export COMMIT_HASH=$(git rev-parse HEAD)
+          echo "COMMIT_HASH: $COMMIT_HASH"
+
+          jf xr curl "${{env.GIT_REPO_URL}}/$(git rev-parse HEAD)/scan-results" -H 'Content-Type: application/json' -o $GIT_REPO_JSON
           cat $GIT_REPO_JSON
 
