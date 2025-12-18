@@ -195,7 +195,7 @@ jobs:
           sudo chmod +x /usr/local/bin/yq 
           yq --version
           jq --version
-          
+
       - name: "Setup JFrog CLI"
         uses: jfrog/setup-jfrog-cli@v4
         id: setup-cli
@@ -222,15 +222,21 @@ jobs:
           cat $GIT_REPO_JSON
 
           commit_hash=$(cat $GIT_REPO_JSON | jq -r '.commit_hash')
-          scan_results=$(cat $GIT_REPO_JSON | jq -r '.scan_results')
-          echo "scan_results: $scan_results"
-          if [ "$scan_results" == "null" ]; then
-            echo "No scan results found"
+          # Get the count of SAST results
+          sast_count=$(cat "$GIT_REPO_JSON" | jq '.scan_results.sast | length')
+
+          if [ "$sast_count" -eq 0 ]; then
+            echo " - :no_good: :volcano: NO SAST results found" >> $GITHUB_STEP_SUMMARY
           else
-            echo "Scan results found"
-
-            echo "$scan_results" >> $GITHUB_STEP_SUMMARY
-
+            echo "Found $sast_count SA
+            echo " | ID | JFrog Severity | Package version | File name | start line | abbreviation | description |" >> $GITHUB_STEP_SUMMARY
+            echo " | :--- | :--- | :--- | :--- | :--- | :--- | :--- | " >> $GITHUB_STEP_SUMMARY
+            
+            # Iterate through SAST results and print jfrog_severity, id, and file
+            cat "$GIT_REPO_JSON" | jq -r '.scan_results.sast[] | "\(.jfrog_severity)|\(.id)|\(.file)|\(.start_line)|\(.abbreviation)|\(.description)"' | while IFS='|' read -r severity id file start_line abbreviation description; do
+                echo " | $id | $severity | $file | $start_line | $abbreviation | $description |" >> $GITHUB_STEP_SUMMARY
+            done
           fi
+
 
           
