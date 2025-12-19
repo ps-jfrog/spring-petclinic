@@ -54,7 +54,7 @@ frogbot() {
 }
 
 xray_mvn_app() {
-    export BUILD_NAME="spring-petclinic" BUILD_ID="psj-mvn-50" 
+    export BUILD_NAME="spring-petclinic" BUILD_ID="psj-dkr-52" # "psj-mvn-52"
 
     export BUILD_SCAN_RESP_JSON="gitrepo-scan-${BUILD_ID}.json"
 
@@ -105,8 +105,8 @@ xray_mvn_app() {
     rm -rf $BUILD_SCAN_RESP_JSON
 }
 
-frogbot
+# frogbot
 
-echo "--------------------------------"
+# echo "--------------------------------"
 
 xray_mvn_app

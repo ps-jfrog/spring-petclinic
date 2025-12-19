@@ -304,7 +304,7 @@ jobs:
         timeout-minutes: 15    # ref https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#jobsjob_idstepstimeout-minutes
         continue-on-error: true    # ref: https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#jobsjob_idstepscontinue-on-error
         run: |
-          jf bs ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --fail=false --format=table --extended-table=true --rescan=false --vuln=true
+          jf bs ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --fail=false --format=table --extended-table=true --vuln=true
 
       - name: "Optional: Build Scan V2"  # https://jfrog.com/help/r/xray-rest-apis/scan-build-v2
         # jf xr curl /api/v2/ci/build -H 'Content-Type: application/json' -d '{"build_name": "spring-petclinic", "build_number": "ga-gdl-xray-50","rescan":true }'
@@ -368,7 +368,7 @@ jobs:
         timeout-minutes: 15   
         continue-on-error: true  
         run: |
-          jf bs ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --fail=false --format=table --extended-table=true --rescan=false --vuln=true
+          jf bs ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --fail=false --format=table --extended-table=true --vuln=true
 
       - name: "RLM: RBv2 promote ${{env.RBv2_ENV_VAL}}"
         run: |
@@ -408,7 +408,7 @@ jobs:
         timeout-minutes: 15   
         continue-on-error: true  
         run: |
-          jf bs ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --fail=false --format=table --extended-table=true --rescan=false --vuln=true
+          jf bs ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --fail=false --format=table --extended-table=true --vuln=true
 
       - name: "RLM: RBv2 promote ${{env.RBv2_ENV_VAL}}"
         run: |
@@ -448,7 +448,7 @@ jobs:
         timeout-minutes: 15   
         continue-on-error: true  
         run: |
-          jf bs ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --fail=false --format=table --extended-table=true --rescan=false --vuln=true
+          jf bs ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --fail=false --format=table --extended-table=true --vuln=true
 
       - name: "RLM: RBv2 promote ${{env.RBv2_ENV_VAL}}"
         run: |
@@ -900,7 +900,7 @@ jobs:
         timeout-minutes: 15   
         continue-on-error: true  
         run: |
-          jf bs ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --fail=false --format=table --extended-table=true --rescan=false --vuln=true
+          jf bs ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --fail=false --format=table --extended-table=true --vuln=true
 
       - name: "Optional: Build Scan V2" # https://jfrog.com/help/r/xray-rest-apis/scan-build-v2
         run: |
@@ -960,7 +960,7 @@ jobs:
         timeout-minutes: 15   
         continue-on-error: true  
         run: |
-          jf bs ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --fail=false --format=table --extended-table=true --rescan=false --vuln=true
+          jf bs ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --fail=false --format=table --extended-table=true --vuln=true
 
       - name: "RLM: RBv2 promote ${{env.RBv2_ENV_VAL}}"
         run: |
@@ -1000,7 +1000,7 @@ jobs:
         timeout-minutes: 15   
         continue-on-error: true  
         run: |
-          jf bs ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --fail=false --format=table --extended-table=true --rescan=false --vuln=true
+          jf bs ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --fail=false --format=table --extended-table=true --vuln=true
 
       - name: "RLM: RBv2 promote ${{env.RBv2_ENV_VAL}}"
         run: |
@@ -1040,7 +1040,7 @@ jobs:
         timeout-minutes: 15   
         continue-on-error: true  
         run: |
-          jf bs ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --fail=false --format=table --extended-table=true --rescan=false --vuln=true
+          jf bs ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --fail=false --format=table --extended-table=true --vuln=true
           
       - name: "RLM: RBv2 promote ${{env.RBv2_ENV_VAL}}"
         run: |
