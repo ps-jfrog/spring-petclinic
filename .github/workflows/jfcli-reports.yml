@@ -1,0 +1,219 @@
+name: "JFrog: Security Reports"
+# refer https://docs.jfrog-applications.jfrog.io/jfrog-applications/frogbot/setup-frogbot/setup-frogbot-using-github-actions
+on: 
+    workflow_run:
+        workflows: ["Frogbot: Scan and Fix", "JFCLI: JAVA"]
+        types: [completed]
+permissions:
+  pull-requests: write
+  contents: write
+  security-events: write
+  # [Mandatory If using OIDC authentication protocol instead of JF_ACCESS_TOKEN]
+  id-token: write
+env:
+  JF_RT_URL: "https://${{vars.JF_NAME}}.jfrog.io"
+  BUILD_ID: ${{ github.run_number }}
+  JOB_SUMMARY: false
+  JFROG_CLI_LOG_LEVEL: DEBUG 
+jobs:
+  report-frogbot-scan:
+    name: "FrogBot: Scan Report"
+    runs-on: ubuntu-latest
+    defaults:
+       run:
+         working-directory: ${{github.workspace}}
+    steps:
+      - name: "Install prereqs tools"
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq yq
+          sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/local/bin/yq
+          sudo chmod +x /usr/local/bin/yq 
+          yq --version
+          jq --version
+
+      - name: "Setup JFrog CLI"
+        uses: jfrog/setup-jfrog-cli@v4
+        id: setup-cli
+        env:
+          JF_URL: ${{env.JF_RT_URL}}
+          JFROG_CLI_LOG_LEVEL: ${{env.JFROG_CLI_LOG_LEVEL}}
+        with:
+          version: latest 
+          oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
+          disable-job-summary: ${{env.JOB_SUMMARY}}
+
+      - name: "Clone VCS"
+        uses: actions/checkout@v4 # ref: https://github.com/actions/checkout
+          
+      - name: "Report: FrogBot"
+        env:
+          GIT_REPO_JSON: "gitrepo-scan-${{env.BUILD_ID}}.json"
+        run: |
+          # Get repository information
+          # Use GitHub context as primary source, with git remote as fallback
+          if [ -n "${{ github.repository }}" ]; then
+            export GIT_REPO_NAME="${{ github.repository }}"
+            echo "DEBUG: Using GitHub context - GIT_REPO_NAME: $GIT_REPO_NAME"
+          else
+            export GIT_REPO_PATH=$(git remote get-url origin)
+            echo "DEBUG: GIT_REPO_PATH from git remote: $GIT_REPO_PATH"
+            # Handle both SSH (git@github.com:owner/repo.git) and HTTPS (https://github.com/owner/repo.git) formats
+            if [[ "$GIT_REPO_PATH" == git@github.com:* ]]; then
+              export GIT_REPO_NAME="${GIT_REPO_PATH#git@github.com:}"
+            elif [[ "$GIT_REPO_PATH" == https://github.com/* ]]; then
+              export GIT_REPO_NAME="${GIT_REPO_PATH#https://github.com/}"
+            elif [[ "$GIT_REPO_PATH" == http://github.com/* ]]; then
+              export GIT_REPO_NAME="${GIT_REPO_PATH#http://github.com/}"
+            else
+              echo "ERROR: Unknown git remote format: $GIT_REPO_PATH"
+              exit 1
+            fi
+            # Remove .git suffix if present
+            export GIT_REPO_NAME="${GIT_REPO_NAME%.git}"
+            echo "DEBUG: Extracted GIT_REPO_NAME: $GIT_REPO_NAME"
+          fi
+          
+          export COMMIT_HASH=$(git rev-parse HEAD)
+          export BRANCH=$(git branch --show-current)
+          export REPO_FULL_URL="https://github.com/${GIT_REPO_NAME}"
+
+          echo "DEBUG: COMMIT_HASH: $COMMIT_HASH  BRANCH: $BRANCH   REPO_FULL_URL: $REPO_FULL_URL"
+
+          echo "# :frog: FrogBot Scan Summary :pushpin:" >> $GITHUB_STEP_SUMMARY
+          echo " " >> $GITHUB_STEP_SUMMARY
+          echo " " >> $GITHUB_STEP_SUMMARY
+          echo "## :bug: :worm: :beetle: SAST :ghost:" >> $GITHUB_STEP_SUMMARY
+          echo " - GIT REPO URL: $REPO_FULL_URL" >> $GITHUB_STEP_SUMMARY
+          echo " - Commited HASH: $COMMIT_HASH" >> $GITHUB_STEP_SUMMARY
+          echo " - Repo Branch: $BRANCH" >> $GITHUB_STEP_SUMMARY
+          
+
+          # Get the list of frogbot repositories
+          export GIT_REPO_JSON="./frogbot-repo.json"
+          jf xr curl "/api/v1/git/repositories" -H 'Content-Type: application/json' -o $GIT_REPO_JSON
+          REPO_COUNT=$(cat "$GIT_REPO_JSON" | jq '.repositories | length')
+          echo "DEBUG: Found $REPO_COUNT repositories in JFrog"
+
+          # Iterate through repositories
+          export REPO_ID=""
+          for i in $(seq 0 $((REPO_COUNT - 1))); do
+              REPO_URL=$(jq -r ".repositories[$i].url" "$GIT_REPO_JSON")
+              REPO_ID_CANDIDATE=$(jq -r ".repositories[$i].id" "$GIT_REPO_JSON")
+              echo "DEBUG: Checking repository [$i]: URL=$REPO_URL, ID=$REPO_ID_CANDIDATE"
+              
+              # Compare URL with REPO_FULL_URL (handle both with and without .git suffix)
+              REPO_URL_CLEAN="${REPO_URL%.git}"
+              REPO_FULL_URL_CLEAN="${REPO_FULL_URL%.git}"
+              if [ "$REPO_URL" == "$REPO_FULL_URL" ] || [ "$REPO_URL_CLEAN" == "$REPO_FULL_URL_CLEAN" ]; then
+                  export REPO_ID="$REPO_ID_CANDIDATE"
+                  echo "DEBUG: Match found! REPO_ID: $REPO_ID"
+                  break
+              fi
+          done
+          
+          if [ -z "$REPO_ID" ]; then
+            echo "WARNING: Repository ID not found for $REPO_FULL_URL"
+            echo "DEBUG: Available repository URLs:"
+            cat "$GIT_REPO_JSON" | jq -r '.repositories[] | "  - \(.url) (ID: \(.id))"'
+          else
+            echo "Found repository ID: $REPO_ID for GIT_REPO_NAME: $GIT_REPO_NAME"
+          fi
+
+          echo " - JFrog repository ID:  $REPO_ID for the git repo: $REPO_FULL_URL" >> $GITHUB_STEP_SUMMARY
+          echo " " >> $GITHUB_STEP_SUMMARY
+
+
+          # repo vunerabilitiies
+          export GIT_REPO_VUNL_JSON="./frogbot-scanreport.json"
+          jf xr curl "/api/v1/git/repositories/$REPO_ID/commits/$(git rev-parse HEAD)/scan-results?branch_name=$(git branch --show-current)" -H 'Content-Type: application/json' -o $GIT_REPO_VUNL_JSON
+          # Get the count of SAST results
+          sast_count=$(cat "$GIT_REPO_VUNL_JSON" | jq '.scan_results.sast | length')
+
+          if [ "$sast_count" -eq 0 ]; then
+              echo " - :no_good: :volcano: NO SAST results found" 
+          else
+              echo "Found $sast_count SAST results"
+              echo " | ID | JFrog Severity | File name | start line | abbreviation | description |"  >> $GITHUB_STEP_SUMMARY
+              echo " | :--- | :--- | :--- | :--- | :--- | :--- |" >> $GITHUB_STEP_SUMMARY
+
+              # Iterate through SAST results and print jfrog_severity, id, and file
+              cat "$GIT_REPO_VUNL_JSON" | jq -r '.scan_results.sast[] | "\(.jfrog_severity)|\(.id)|\(.file)|\(.start_line)|\(.abbreviation)|\(.description)|"' | while IFS='|' read -r severity id file start_line abbreviation description; do
+                  echo " | $id | $severity | $file | $start_line | $abbreviation | $description |"  >> $GITHUB_STEP_SUMMARY
+              done
+          fi
+          echo " " >> $GITHUB_STEP_SUMMARY
+          echo " " >> $GITHUB_STEP_SUMMARY
+
+
+  report-xray-scan-mvn-app:
+    name: "Xray & JAS: Scan Report for MVN app"
+    runs-on: ubuntu-latest
+    env:
+      BUILD_NAME: "spring-petclinic"
+      BUILD_ID: "psj-mvn-${{github.job.'JFCLI: JAVA'.run_number}}"
+    steps:
+      - name: "Setup JFrog CLI"
+        uses: jfrog/setup-jfrog-cli@v4
+        id: setup-cli
+        env:
+          JF_URL: ${{env.JF_RT_URL}}
+          JFROG_CLI_LOG_LEVEL: ${{env.JFROG_CLI_LOG_LEVEL}}
+        with:
+          version: latest 
+          oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
+          disable-job-summary: ${{env.JOB_SUMMARY}}
+
+      - name: "Report: MVN Scan"
+        env:
+          # xray/api/v1/summary/build?build_name=spring-petclinic&build_number=psj-mvn-38
+          BUILD_SCAN_URL: "/api/v1/summary/build?build_name=${{env.BUILD_NAME}}&&build_number=${{env.BUILD_ID}}"
+          BUILD_SCAN_RESP_JSON: "gitrepo-scan-${{env.BUILD_ID}}.json"
+        run: |
+          export BUILD_SCAN_RESP_JSON="gitrepo-scan-${BUILD_ID}.json"
+
+          jf xr curl "/api/v1/summary/build?build_name=${BUILD_NAME}&&build_number=${BUILD_ID}" -H 'Content-Type: application/json' -o $BUILD_SCAN_RESP_JSON
+          # cat $BUILD_SCAN_RESP_JSON
+
+          echo "# :frog: Xray Scan Summary for build :pushpin:" >> $GITHUB_STEP_SUMMARY
+          echo " -  ${BUILD_NAME}/${BUILD_ID} " 
+          echo " " >> $GITHUB_STEP_SUMMARY
+          echo "## :bug: :worm: :beetle: ISSUES :ghost:" >> $GITHUB_STEP_SUMMARY
+        
+          echo " "
+          echo "## :bug: :worm: :beetle: LICENSES :ghost:" >> $GITHUB_STEP_SUMMARY
+          echo " - Total licenses usage for the build: $(cat $BUILD_SCAN_RESP_JSON | jq -r '.licenses | length')" >> $GITHUB_STEP_SUMMARY
+          echo " - Licenses: " >> $GITHUB_STEP_SUMMARY
+          cat $BUILD_SCAN_RESP_JSON | jq -r '.licenses[].name' | sort -u | while read -r license; do
+              echo "  - $license" >> $GITHUB_STEP_SUMMARY
+          done
+          
+          echo " " >> $GITHUB_STEP_SUMMARY
+          echo "## :bug: :worm: :beetle: OPERATIONAL RISKS :ghost:" >> $GITHUB_STEP_SUMMARY
+          echo " - Total operational risks for the build: $(cat $BUILD_SCAN_RESP_JSON | jq -r '.operational_risks | length')" >> $GITHUB_STEP_SUMMARY
+          echo " | component | current version | risk | latest version | released | " >> $GITHUB_STEP_SUMMARY
+          echo " | :--- | :--- | :--- | :--- | :--- | " >> $GITHUB_STEP_SUMMARY
+
+          # Function to extract package name and version from component_id
+          extract_component_info() {
+              local component_id="$1"
+              # Remove protocol prefix (e.g., "npm://" or "gav://")
+              local without_protocol="${component_id#*://}"
+              # Extract package name (everything before the last colon)
+              local package_name="${without_protocol%:*}"
+              # Extract version (everything after the last colon)
+              local version="${without_protocol##*:}"
+              echo "$package_name|$version"
+          }
+
+          cat $BUILD_SCAN_RESP_JSON | jq -r '.operational_risks[] | "\(.component_id)|\(.current_version)|\(.risk)|\(.latest_version)|\(.released)|"' | while IFS='|' read -r component_id current_version risk latest_version released; do
+              # Extract package name and version from component_id
+              component_info=$(extract_component_info "$component_id")
+              component_name=$(echo "$component_info" | cut -d'|' -f1)
+              component_version=$(echo "$component_info" | cut -d'|' -f2)
+
+              echo " | $component_name | $component_version | $risk | $latest_version | $released |" >> $GITHUB_STEP_SUMMARY
+          done
+
+          echo " " >> $GITHUB_STEP_SUMMARY
+              

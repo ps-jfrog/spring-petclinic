@@ -1329,11 +1329,6 @@ jobs:
         run: |
           jf gradle clean artifactoryPublish -x test --build-name=${{env.BUILD_NAME}} --build-number=${{env.BUILD_ID}} 
 
-      - name: "list folder"
-        run: |
-          pwd
-          tree build/
-
       - name: "Evidence: Artifact"
         env:
           REPO_JAR: "${{env.RT_REPO_GRADLE_DEFAULT_LOCAL}}/org/springframework/samples/${{env.BUILD_NAME}}/3.5.0/${{env.BUILD_NAME}}-3.5.0-plain.jar"  # /krishnam-gdl-dev-fed/org/springframework/samples/spring-petclinic/3.5.0/
@@ -1393,92 +1388,4 @@ jobs:
           jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_JSON}} --predicate-type https://cyclonedx.org/bom/v1.4 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}}
                  
           
-  report-XrayScan:
-    name: "Report: Xray Scan"
-    needs: [mvnDownloadRBv2FromSaasEdge, mvnDownloadRBv2FromSaasSolEng, dockerDownloadRBv2FromSaasEdge, dockerDownloadRBv2FromSaasSolEng]
-    runs-on: ubuntu-latest
-    env:
-      MVN_BUILD_ID: "psj-mvn-${{github.run_number}}"
-      DKR_BUILD_ID: "psj-dkr-${{github.run_number}}"
-    steps:
-      - name: "Setup JFrog CLI"
-        uses: jfrog/setup-jfrog-cli@v4
-        id: setup-cli
-        env:
-          JF_URL: ${{env.JF_RT_URL}}
-          JFROG_CLI_LOG_LEVEL: ${{env.JFROG_CLI_LOG_LEVEL}}
-        with:
-          version: latest 
-          oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
-          disable-job-summary: ${{env.JOB_SUMMARY}}
-
-      - name: "Report: MVN Scan"
-        env:
-          # xray/api/v1/summary/build?build_name=spring-petclinic&build_number=psj-mvn-38
-          BUILD_SCAN_URL: "/api/v1/summary/build?build_name=${{env.BUILD_NAME}}&&build_number=${{env.MVN_BUILD_ID}}"
-          BUILD_SCAN_RESP_JSON: "gitrepo-scan-${{env.MVN_BUILD_ID}}.json"
-        run: |
-          jf xr curl $BUILD_SCAN_URL -H 'Content-Type: application/json' -o $BUILD_SCAN_RESP_JSON
-          cat $BUILD_SCAN_RESP_JSON
-
-          echo "# :frog: Xray Scan Summary for build ${{env.BUILD_NAME}}/${{env.BUILD_ID}}:pushpin:" >> $GITHUB_STEP_SUMMARY
-          echo " " >> $GITHUB_STEP_SUMMARY
-          echo " " >> $GITHUB_STEP_SUMMARY
-
-          echo "## :bug: :worm: :beetle: ISSUES :ghost:" >> $GITHUB_STEP_SUMMARY
-          echo " " >> $GITHUB_STEP_SUMMARY
-
-          # Issues
-          issuesCount=0
-          issues=$(cat $BUILD_SCAN_RESP_JSON | jq -r '.issues[] | .summary')
-          for issue in $issues; do
-            issuesCount=$((issuesCount + 1))
-          done
-          echo "  - Issues count: $issuesCount" >> $GITHUB_STEP_SUMMARY
-          echo " " >> $GITHUB_STEP_SUMMARY
-
-          # Licenses
-          licensesCount=0
-          echo "## :bug: :worm: :beetle: LICENSES :ghost:" >> $GITHUB_STEP_SUMMARY
-          licenses=$(cat $BUILD_SCAN_RESP_JSON | jq -r '.licenses[] | .summary')
-          for license in $licenses; do
-            licensesCount=$((licensesCount + 1))
-          done
-          echo "  - Licenses count: $licensesCount" >> $GITHUB_STEP_SUMMARY
-          echo " " >> $GITHUB_STEP_SUMMARY
-          
-          # Operational Risks
-          operationalRisksCount=0
-          echo "## :bug: :worm: :beetle: OPERATIONAL RISKS :ghost:" >> $GITHUB_STEP_SUMMARY
-          operationalRisks=$(cat $BUILD_SCAN_RESP_JSON | jq -r '.operational_risks[] | .summary')
-
-          component_id | risk | latest_version | 
-          for operationalRisk in $operationalRisks; do
-            operationalRisksCount=$((operationalRisksCount + 1))
-
-          done
-          echo "  - Operational Risks count: $operationalRisksCount" >> $GITHUB_STEP_SUMMARY
-          echo " " >> $GITHUB_STEP_SUMMARY
-
-
-          # Errors
-          errorsCount=0
-          echo "## :bug: :worm: :beetle: ERRORS :ghost:" >> $GITHUB_STEP_SUMMARY
-          errors=$(cat $BUILD_SCAN_RESP_JSON | jq -r '.errors[] | .summary')
-          for error in $errors; do
-            errorsCount=$((errorsCount + 1))
-          done
-          echo "  - Errors count: $errorsCount" >> $GITHUB_STEP_SUMMARY
-          echo " " >> $GITHUB_STEP_SUMMARY
-         
-
-      - name: "Report: DKR Scan"
-        env:
-          # xray/api/v1/summary/build?build_name=spring-petclinic&build_number=psj-mvn-38
-          BUILD_SCAN_URL: "/api/v1/summary/build?build_name=${{env.BUILD_NAME}}&&build_number=${{env.DKR_BUILD_ID}}"
-          BUILD_SCAN_RESP_JSON: "gitrepo-scan-${{env.DKR_BUILD_ID}}.json"
-        run: |
-          jf xr curl $BUILD_SCAN_URL -H 'Content-Type: application/json' -o $BUILD_SCAN_RESP_JSON
-          cat $BUILD_SCAN_RESP_JSON
-      
-          
+  
