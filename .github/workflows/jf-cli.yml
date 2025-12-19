@@ -364,6 +364,12 @@ jobs:
           oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
           disable-job-summary: ${{env.JOB_SUMMARY}}
 
+      - name: "Xray - Build scan"
+        timeout-minutes: 15   
+        continue-on-error: true  
+        run: |
+          jf bs ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --fail=false --format=table --extended-table=true --rescan=false --vuln=true
+
       - name: "RLM: RBv2 promote ${{env.RBv2_ENV_VAL}}"
         run: |
           jf rbp ${{env.BUILD_NAME}} ${{env.BUILD_ID}} ${{env.RBv2_ENV_VAL}} --include-repos=${{env.RT_REPO_DEV_LOCAL}} --sync=true --signing-key=${{secrets.RBV2_SIGNING_KEY}}  
@@ -398,6 +404,12 @@ jobs:
           oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
           disable-job-summary: ${{env.JOB_SUMMARY}} 
   
+      - name: "Xray - Build scan"
+        timeout-minutes: 15   
+        continue-on-error: true  
+        run: |
+          jf bs ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --fail=false --format=table --extended-table=true --rescan=false --vuln=true
+
       - name: "RLM: RBv2 promote ${{env.RBv2_ENV_VAL}}"
         run: |
           jf rbp ${{env.BUILD_NAME}} ${{env.BUILD_ID}} ${{env.RBv2_ENV_VAL}} --include-repos=${{env.RT_REPO_QA_LOCAL}} --sync=true --signing-key=${{secrets.RBV2_SIGNING_KEY}}  
@@ -431,6 +443,12 @@ jobs:
           version: latest  #2.71.0
           oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
           disable-job-summary: ${{env.JOB_SUMMARY}}
+
+      - name: "Xray - Build scan"
+        timeout-minutes: 15   
+        continue-on-error: true  
+        run: |
+          jf bs ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --fail=false --format=table --extended-table=true --rescan=false --vuln=true
 
       - name: "RLM: RBv2 promote ${{env.RBv2_ENV_VAL}}"
         run: |
@@ -938,6 +956,12 @@ jobs:
           oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
           disable-job-summary: ${{env.JOB_SUMMARY}}
 
+      - name: "Xray - Build scan"
+        timeout-minutes: 15   
+        continue-on-error: true  
+        run: |
+          jf bs ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --fail=false --format=table --extended-table=true --rescan=false --vuln=true
+
       - name: "RLM: RBv2 promote ${{env.RBv2_ENV_VAL}}"
         run: |
           jf rbp ${{env.BUILD_NAME}} ${{env.BUILD_ID}} ${{env.RBv2_ENV_VAL}} --include-repos=${{env.RT_REPO_DEV_LOCAL}} --sync=true --signing-key=${{secrets.RBV2_SIGNING_KEY}}  
@@ -972,6 +996,12 @@ jobs:
           oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
           disable-job-summary: ${{env.JOB_SUMMARY}} 
   
+      - name: "Xray - Build scan"
+        timeout-minutes: 15   
+        continue-on-error: true  
+        run: |
+          jf bs ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --fail=false --format=table --extended-table=true --rescan=false --vuln=true
+
       - name: "RLM: RBv2 promote ${{env.RBv2_ENV_VAL}}"
         run: |
           jf rbp ${{env.BUILD_NAME}} ${{env.BUILD_ID}} ${{env.RBv2_ENV_VAL}} --include-repos=${{env.RT_REPO_QA_LOCAL}} --sync=true --signing-key=${{secrets.RBV2_SIGNING_KEY}}  
@@ -1006,6 +1036,12 @@ jobs:
           oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
           disable-job-summary: ${{env.JOB_SUMMARY}}
 
+      - name: "Xray - Build scan"
+        timeout-minutes: 15   
+        continue-on-error: true  
+        run: |
+          jf bs ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --fail=false --format=table --extended-table=true --rescan=false --vuln=true
+          
       - name: "RLM: RBv2 promote ${{env.RBv2_ENV_VAL}}"
         run: |
           jf rbp ${{env.BUILD_NAME}} ${{env.BUILD_ID}} ${{env.RBv2_ENV_VAL}} --include-repos=${{env.RT_REPO_PROD_LOCAL}} --sync=true --signing-key=${{secrets.RBV2_SIGNING_KEY}}  

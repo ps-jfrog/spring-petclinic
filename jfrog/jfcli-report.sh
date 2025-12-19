@@ -104,4 +104,9 @@ xray_mvn_app() {
     echo " "
     rm -rf $BUILD_SCAN_RESP_JSON
 }
+
+frogbot
+
+echo "--------------------------------"
+
 xray_mvn_app

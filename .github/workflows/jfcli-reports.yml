@@ -1,20 +1,18 @@
 name: "JFrog: Security Reports"
 # refer https://docs.jfrog-applications.jfrog.io/jfrog-applications/frogbot/setup-frogbot/setup-frogbot-using-github-actions
 on: 
-    workflow_run:
-        workflows: ["Frogbot: Scan and Fix", "JFCLI: JAVA"]
-        types: [completed]
+  workflow_run:
+    workflows: 
+      - "JFCLI: JAVA"
+    types: [completed]
 permissions:
   pull-requests: write
   contents: write
-  security-events: write
   # [Mandatory If using OIDC authentication protocol instead of JF_ACCESS_TOKEN]
   id-token: write
 env:
   JF_RT_URL: "https://${{vars.JF_NAME}}.jfrog.io"
-  BUILD_ID: ${{ github.run_number }}
-  JOB_SUMMARY: false
-  JFROG_CLI_LOG_LEVEL: DEBUG 
+  JFROG_CLI_LOG_LEVEL: ERROR 
 jobs:
   report-frogbot-scan:
     name: "FrogBot: Scan Report"
@@ -41,7 +39,6 @@ jobs:
         with:
           version: latest 
           oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
-          disable-job-summary: ${{env.JOB_SUMMARY}}
 
       - name: "Clone VCS"
         uses: actions/checkout@v4 # ref: https://github.com/actions/checkout
@@ -151,7 +148,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       BUILD_NAME: "spring-petclinic"
-      BUILD_ID: "psj-mvn-${{github.job.'JFCLI: JAVA'.run_number}}"
+      BUILD_ID: "psj-mvn-${{github.event.workflow_run.run_number}}"
     steps:
       - name: "Setup JFrog CLI"
         uses: jfrog/setup-jfrog-cli@v4
@@ -162,7 +159,6 @@ jobs:
         with:
           version: latest 
           oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
-          disable-job-summary: ${{env.JOB_SUMMARY}}
 
       - name: "Report: MVN Scan"
         env:
