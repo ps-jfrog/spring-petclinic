@@ -252,7 +252,7 @@ jobs:
           echo "# :frog: Xray Build Policy Violations :pushpin:" >> $GITHUB_STEP_SUMMARY
           echo " " >> $GITHUB_STEP_SUMMARY
           echo " " 
-          echo " - Build: ${{env.BUILD_NAME}} / ${{env.BUILD_ID}} " >> $GITHUB_STEP_SUMMARY
+          echo " - MVN Build: ${{env.BUILD_NAME}} / ${{env.BUILD_ID}} " >> $GITHUB_STEP_SUMMARY
           echo " - Total violations for Build: $(cat ${{env.SCAN_VIOLATIONS_RESP_JSON}} | jq -r '.total_violations')"  >> $GITHUB_STEP_SUMMARY
           echo " - [API: Xray Get Violations](https://jfrog.com/help/r/xray-rest-apis/get-violations)"
           echo " " >> $GITHUB_STEP_SUMMARY
@@ -293,6 +293,172 @@ jobs:
           jf xr curl -X POST ${{env.API_URL}} -H 'Content-Type: application/json' -d "${{env.REQ_JSON}}" -o ${{env.SCAN_VIOLATIONS_RESP_JSON}}
           cat ${{env.SCAN_VIOLATIONS_RESP_JSON}}
 
+          echo "# :frog: Xray MVN RBv2 Policy Violations :pushpin:" >> $GITHUB_STEP_SUMMARY
+          echo " " >> $GITHUB_STEP_SUMMARY
+          echo " " 
+          echo " - MVN RBv2: ${{env.BUILD_NAME}} / ${{env.BUILD_ID}} " >> $GITHUB_STEP_SUMMARY
+          echo " - Total violations for RBv2: $(cat ${{env.SCAN_VIOLATIONS_RESP_JSON}} | jq -r '.total_violations')"  >> $GITHUB_STEP_SUMMARY
+          echo " - [API: Xray Get Violations](https://jfrog.com/help/r/xray-rest-apis/get-violations)"
+          echo " " >> $GITHUB_STEP_SUMMARY
+          echo " " >> $GITHUB_STEP_SUMMARY
+
+          echo " | issue_id | type | severity | watch_name | component_physical_paths | " >> $GITHUB_STEP_SUMMARY
+          echo " | :--- | :--- | :--- | :--- | :--- | " >> $GITHUB_STEP_SUMMARY
+          cat ${{env.SCAN_VIOLATIONS_RESP_JSON}} | jq -r '.violations[] | "\(.issue_id)|\(.violation_details_url)|\(.type)|\(.severity)|\(.watch_name)|\(.component_physical_paths | join("; "))|"' | while IFS='|' read -r issue_id violation_details_url type severity watch_name component_physical_paths; do
+            echo " | [$issue_id]($violation_details_url) | $type | $severity | $watch_name | $component_physical_paths | " >> $GITHUB_STEP_SUMMARY
+          done 
+          echo " " >> $GITHUB_STEP_SUMMARY
+          echo " " >> $GITHUB_STEP_SUMMARY
+
+
+  report-xray-scan-dkr-app:
+    name: "Xray & JAS: Docker Scan Report"
+    runs-on: ubuntu-latest
+    env:
+      BUILD_NAME: "spring-petclinic"
+      BUILD_ID: "psj-dkr-${{github.event.workflow_run.run_number}}"
+    steps:
+      - name: "Setup JFrog CLI"
+        uses: jfrog/setup-jfrog-cli@v4
+        id: setup-cli
+        env:
+          JF_URL: ${{env.JF_RT_URL}}
+          JFROG_CLI_LOG_LEVEL: ${{env.JFROG_CLI_LOG_LEVEL}}
+        with:
+          version: latest 
+          oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
+
+      - name: "Report: Docker Scan report"
+        env:
+          RESP_JSON: "gitrepo-scan-${{env.BUILD_ID}}.json"
+        run: |
+          jf xr curl "/api/v1/summary/build?build_name=${{env.BUILD_NAME}}&&build_number=${{env.BUILD_ID}}" -H 'Content-Type: application/json' -o ${{env.RESP_JSON}}
+          cat ${{env.RESP_JSON}}
+
+          echo "# :frog: Xray Scan report :pushpin:" >> $GITHUB_STEP_SUMMARY
+          echo " " >> $GITHUB_STEP_SUMMARY
+          echo " " >> $GITHUB_STEP_SUMMARY
+          echo " - Build ${{env.BUILD_NAME}}/${{env.BUILD_ID}} " 
+          echo " - [API: Xray Build Summary](https://jfrog.com/help/r/xray-rest-apis/build-summary)"
+          echo " " >> $GITHUB_STEP_SUMMARY
+          # echo "## :bug: :worm: :beetle: ISSUES :ghost:" >> $GITHUB_STEP_SUMMARY # TODO: Add issues report
+        
+          echo " " >> $GITHUB_STEP_SUMMARY
+          echo "## :bug: :worm: :beetle: LICENSES :ghost:" >> $GITHUB_STEP_SUMMARY
+          echo " " >> $GITHUB_STEP_SUMMARY
+          echo " - Total licenses usage for the build: $(cat ${{env.RESP_JSON}} | jq -r '.licenses | length')" >> $GITHUB_STEP_SUMMARY
+          echo " - Licenses: " >> $GITHUB_STEP_SUMMARY
+          cat ${{env.RESP_JSON}} | jq -r '.licenses[].name' | sort -u | while read -r license; do
+              echo "   - $license" >> $GITHUB_STEP_SUMMARY
+          done
+          echo " " >> $GITHUB_STEP_SUMMARY
+          echo " " >> $GITHUB_STEP_SUMMARY
+
+          echo "## :bug: :worm: :beetle: OPERATIONAL RISKS :ghost:" >> $GITHUB_STEP_SUMMARY
+          echo " " >> $GITHUB_STEP_SUMMARY
+          echo " " >> $GITHUB_STEP_SUMMARY
+          echo " - Total operational risks for the build: $(cat ${{env.RESP_JSON}} | jq -r '.operational_risks | length')" >> $GITHUB_STEP_SUMMARY
+          echo " " >> $GITHUB_STEP_SUMMARY
+          echo " " >> $GITHUB_STEP_SUMMARY
+          echo " | component | current version | risk | latest version | released | " >> $GITHUB_STEP_SUMMARY
+          echo " | :--- | :--- | :--- | :--- | :--- | " >> $GITHUB_STEP_SUMMARY
+
+          # Function to extract package name and version from component_id
+          extract_component_info() {
+              local component_id="$1"
+              # Remove protocol prefix (e.g., "npm://" or "gav://")
+              local without_protocol="${component_id#*://}"
+              # Extract package name (everything before the last colon)
+              local package_name="${without_protocol%:*}"
+              # Extract version (everything after the last colon)
+              local version="${without_protocol##*:}"
+              echo "$package_name|$version"
+          }
+
+          cat ${{env.RESP_JSON}} | jq -r '.operational_risks[] | "\(.component_id)|\(.current_version)|\(.risk)|\(.latest_version)|\(.released)|"' | while IFS='|' read -r component_id current_version risk latest_version released; do
+              # Extract package name and version from component_id
+              component_info=$(extract_component_info "$component_id")
+              component_name=$(echo "$component_info" | cut -d'|' -f1)
+              component_version=$(echo "$component_info" | cut -d'|' -f2)
+
+              echo " | $component_name | $component_version | $risk | $latest_version | $released | " >> $GITHUB_STEP_SUMMARY
+          done
+
+          echo " " >> $GITHUB_STEP_SUMMARY
+          echo " " >> $GITHUB_STEP_SUMMARY
+              
+
+    
+  report-xray-dkr-build-violations-report:
+    name: "Xray & JAS: Docker Build Violations Report"
+    runs-on: ubuntu-latest
+    env:
+      BUILD_NAME: "spring-petclinic"
+      BUILD_ID: "psj-dkr-${{github.event.workflow_run.run_number}}"
+    steps:
+      - name: "Setup JFrog CLI"
+        uses: jfrog/setup-jfrog-cli@v4
+        id: setup-cli
+        env:
+          JF_URL: ${{env.JF_RT_URL}}
+          JFROG_CLI_LOG_LEVEL: ${{env.JFROG_CLI_LOG_LEVEL}}
+        with:
+          version: latest 
+          oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
+
+      - name: "Report: Docker Build Violations"
+        env:
+          API_URL: "/api/v1/violations"
+          REQ_JSON: "{ \"filters\": { \"resources\": { { \"builds\": [ { \"name\": \"${{env.BUILD_NAME}}\", \"number\": \"${{env.BUILD_ID}}\" } ] } } }"
+          SCAN_VIOLATIONS_RESP_JSON: "policy-violations-${{env.BUILD_ID}}.json"
+        run: |
+          jf xr curl -X POST ${{env.API_URL}} -H 'Content-Type: application/json' -d "${{env.REQ_JSON}}" -o ${{env.SCAN_VIOLATIONS_RESP_JSON}}
+          cat ${{env.SCAN_VIOLATIONS_RESP_JSON}}
+
+          echo "# :frog: Xray Docker Build Policy Violations :pushpin:" >> $GITHUB_STEP_SUMMARY
+          echo " " >> $GITHUB_STEP_SUMMARY
+          echo " " 
+          echo " - Docker Build: ${{env.BUILD_NAME}} / ${{env.BUILD_ID}} " >> $GITHUB_STEP_SUMMARY
+          echo " - Total violations for Docker Build: $(cat ${{env.SCAN_VIOLATIONS_RESP_JSON}} | jq -r '.total_violations')"  >> $GITHUB_STEP_SUMMARY
+          echo " - [API: Xray Get Violations](https://jfrog.com/help/r/xray-rest-apis/get-violations)"
+          echo " " >> $GITHUB_STEP_SUMMARY
+          echo " " >> $GITHUB_STEP_SUMMARY
+
+          echo " | issue_id | type | severity | watch_name | component_physical_paths | " >> $GITHUB_STEP_SUMMARY
+          echo " | :--- | :--- | :--- | :--- | :--- | " >> $GITHUB_STEP_SUMMARY
+          cat ${{env.SCAN_VIOLATIONS_RESP_JSON}} | jq -r '.violations[] | "\(.issue_id)|\(.violation_details_url)|\(.type)|\(.severity)|\(.watch_name)|\(.component_physical_paths | join("; "))|"' | while IFS='|' read -r issue_id violation_details_url type severity watch_name component_physical_paths; do
+            echo " | [$issue_id]($violation_details_url) | $type | $severity | $watch_name | $component_physical_paths | " >> $GITHUB_STEP_SUMMARY
+          done 
+          echo " " >> $GITHUB_STEP_SUMMARY
+          echo " " >> $GITHUB_STEP_SUMMARY
+
+              
+  report-xray-dkr-rbv2-violations-report:
+    name: "Xray & JAS: Docker RBv2 Violations Report"
+    runs-on: ubuntu-latest
+    env:
+      BUILD_NAME: "spring-petclinic"
+      BUILD_ID: "psj-dkr-${{github.event.workflow_run.run_number}}"
+    steps:
+      - name: "Setup JFrog CLI"
+        uses: jfrog/setup-jfrog-cli@v4
+        id: setup-cli
+        env:
+          JF_URL: ${{env.JF_RT_URL}}
+          JFROG_CLI_LOG_LEVEL: ${{env.JFROG_CLI_LOG_LEVEL}}
+        with:
+          version: latest 
+          oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
+
+      - name: "Report: Docker RBv2 Violations"
+        env:
+          API_URL: "/api/v1/violations"
+          REQ_JSON: "{ \"filters\": { \"resources\": { { \"release_bundles_v2\": [ { \"name\": \"${{env.BUILD_NAME}}\", \"version\": \"${{env.BUILD_ID}}\" } ] } } }"
+          SCAN_VIOLATIONS_RESP_JSON: "policy-violations-${{env.BUILD_ID}}.json"
+        run: |
+          jf xr curl -X POST ${{env.API_URL}} -H 'Content-Type: application/json' -d "${{env.REQ_JSON}}" -o ${{env.SCAN_VIOLATIONS_RESP_JSON}}
+          cat ${{env.SCAN_VIOLATIONS_RESP_JSON}}
+
           echo "# :frog: Xray RBv2 Policy Violations :pushpin:" >> $GITHUB_STEP_SUMMARY
           echo " " >> $GITHUB_STEP_SUMMARY
           echo " " 
@@ -310,4 +476,4 @@ jobs:
           echo " " >> $GITHUB_STEP_SUMMARY
           echo " " >> $GITHUB_STEP_SUMMARY
 
-              
+    
