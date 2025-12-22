@@ -105,8 +105,40 @@ xray_mvn_app() {
     rm -rf $BUILD_SCAN_RESP_JSON
 }
 
+
+xray_mvn_rbv2_violations() {
+    export BUILD_NAME="spring-petclinic" BUILD_ID="psj-mvn-53" # "psj-mvn-52"
+    export BUILD_SCAN_RESP_JSON="rbv2-violations-${BUILD_ID}.json" JFROG_CLI_LOG_LEVEL="DEBUG" 
+
+    export REQ_JSON="{ \"filters\": { \"resources\": { \"release_bundles_v2\": [ { \"name\": \"${BUILD_NAME}\", \"version\": \"${BUILD_ID}\" } ] } } }"
+
+    export RBV2_VOILATIONS_RESP_JSON="rbv2-violations-${BUILD_ID}.json"
+
+    jf xr curl -X POST "/api/v1/violations" -H 'Content-Type: application/json' -d "$REQ_JSON" -o $RBV2_VOILATIONS_RESP_JSON
+    # cat $RBV2_VOILATIONS_RESP_JSON
+
+    echo "# :frog: Xray RBv2 Policy Violations :pushpin:" 
+    echo " " 
+    echo " " 
+    echo " - RBv2: ${BUILD_NAME}/${BUILD_ID} " 
+    echo " - Total violations for RBv2: $(cat $RBV2_VOILATIONS_RESP_JSON | jq -r '.total_violations')"  
+    echo " " 
+    echo " " 
+
+    echo " | issue_id | type | severity | watch_name | component_physical_paths | " 
+    echo " | :--- | :--- | :--- | :--- | :--- | " 
+
+    cat $RBV2_VOILATIONS_RESP_JSON | jq -r '.violations[] | "\(.issue_id)|\(.violation_details_url)|\(.type)|\(.severity)|\(.watch_name)|\(.component_physical_paths | join("; "))|"' | while IFS='|' read -r issue_id violation_details_url type severity watch_name component_physical_paths; do
+        echo " | [$issue_id]($violation_details_url) | $type | $severity | $watch_name | $component_physical_paths | "
+    done
+    echo " " 
+    echo " "
+
+    rm -rf $RBV2_VOILATIONS_RESP_JSON
+}
+
 # frogbot
-
 # echo "--------------------------------"
+#xray_mvn_app
 
-xray_mvn_app
+xray_mvn_rbv2_violations
