@@ -189,48 +189,56 @@ jobs:
           echo " " >> $GITHUB_STEP_SUMMARY
           echo "## :bug: :worm: :beetle: LICENSES :ghost:" >> $GITHUB_STEP_SUMMARY
           echo " " >> $GITHUB_STEP_SUMMARY
-          echo " - Total licenses usage for the build: $(cat ${{env.RESP_JSON}} | jq -r '.licenses | length')" >> $GITHUB_STEP_SUMMARY
-          echo " - Licenses: " >> $GITHUB_STEP_SUMMARY
-          cat ${{env.RESP_JSON}} | jq -r '.licenses[].name' | sort -u | while read -r license; do
-              echo "   - $license" >> $GITHUB_STEP_SUMMARY
-          done
+          export licenses_count=$(cat ${{env.RESP_JSON}} | jq -r '.licenses | length')
+          echo " - Total licenses usage for the build: $licenses_count" >> $GITHUB_STEP_SUMMARY
+          if [ "$licenses_count" -eq 0 ]; then
+            echo " - :no_good: :volcano: NO licenses found" >> $GITHUB_STEP_SUMMARY
+          else
+            echo " - Licenses: " >> $GITHUB_STEP_SUMMARY
+            cat ${{env.RESP_JSON}} | jq -r '.licenses[].name' | sort -u | while read -r license; do
+                echo "   - $license" >> $GITHUB_STEP_SUMMARY
+            done
+          fi
           echo " " >> $GITHUB_STEP_SUMMARY
           echo " " >> $GITHUB_STEP_SUMMARY
 
           echo "## :bug: :worm: :beetle: OPERATIONAL RISKS :ghost:" >> $GITHUB_STEP_SUMMARY
           echo " " >> $GITHUB_STEP_SUMMARY
           echo " " >> $GITHUB_STEP_SUMMARY
-          echo " - Total operational risks for the build: $(cat ${{env.RESP_JSON}} | jq -r '.operational_risks | length')" >> $GITHUB_STEP_SUMMARY
+          export totalOpsRisks=$(cat ${{env.RESP_JSON}} | jq -r '.operational_risks | length')
+          echo " - Total operational risks for the build: $totalOpsRisks" >> $GITHUB_STEP_SUMMARY
           echo " " >> $GITHUB_STEP_SUMMARY
           echo " " >> $GITHUB_STEP_SUMMARY
-          echo " | component | current version | risk | latest version | released | " >> $GITHUB_STEP_SUMMARY
-          echo " | :--- | :--- | :--- | :--- | :--- | " >> $GITHUB_STEP_SUMMARY
+          if [ "$totalOpsRisks" -eq 0 ]; then
+            echo " - :no_good: :volcano: NO operational risks found" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Found $totalOpsRisks operational risks"
+            echo " | Component | Current Version | Risk | Latest Version | Released | " >> $GITHUB_STEP_SUMMARY
+            echo " | :--- | :--- | :--- | :--- | :--- | " >> $GITHUB_STEP_SUMMARY
 
-          # Function to extract package name and version from component_id
-          extract_component_info() {
-              local component_id="$1"
-              # Remove protocol prefix (e.g., "npm://" or "gav://")
-              local without_protocol="${component_id#*://}"
-              # Extract package name (everything before the last colon)
-              local package_name="${without_protocol%:*}"
-              # Extract version (everything after the last colon)
-              local version="${without_protocol##*:}"
-              echo "$package_name|$version"
-          }
+            # Function to extract package name and version from component_id
+            extract_component_info() {
+                local component_id="$1"
+                # Remove protocol prefix (e.g., "npm://" or "gav://")
+                local without_protocol="${component_id#*://}"
+                # Extract package name (everything before the last colon)
+                local package_name="${without_protocol%:*}"
+                # Extract version (everything after the last colon)
+                local version="${without_protocol##*:}"
+                echo "$package_name|$version"
+            }
 
-          cat ${{env.RESP_JSON}} | jq -r '.operational_risks[] | "\(.component_id)|\(.current_version)|\(.risk)|\(.latest_version)|\(.released)|"' | while IFS='|' read -r component_id current_version risk latest_version released; do
-              # Extract package name and version from component_id
-              component_info=$(extract_component_info "$component_id")
-              component_name=$(echo "$component_info" | cut -d'|' -f1)
-              component_version=$(echo "$component_info" | cut -d'|' -f2)
+            cat ${{env.RESP_JSON}} | jq -r '.operational_risks[] | "\(.component_id)|\(.current_version)|\(.risk)|\(.latest_version)|\(.released)|"' | while IFS='|' read -r component_id current_version risk latest_version released; do
+                # Extract package name and version from component_id
+                component_info=$(extract_component_info "$component_id")
+                component_name=$(echo "$component_info" | cut -d'|' -f1)
+                component_version=$(echo "$component_info" | cut -d'|' -f2)
 
-              echo " | $component_name | $component_version | $risk | $latest_version | $released | " >> $GITHUB_STEP_SUMMARY
-          done
-
+                echo " | $component_name | $component_version | $risk | $latest_version | $released | " >> $GITHUB_STEP_SUMMARY
+            done
+          fi
           echo " " >> $GITHUB_STEP_SUMMARY
           echo " " >> $GITHUB_STEP_SUMMARY
-              
-
     
   report-xray-mvn-build-violations-report:
     name: "Xray & JAS: MVN Build Violations Report"
@@ -271,6 +279,10 @@ jobs:
                       \"name\": \"${{env.BUILD_NAME}}\",
                       \"number\": \"${{env.BUILD_ID}}\"
                     }
+                  ]
+                }
+              }
+            }
         run: |
           jf xr curl -X POST ${{env.API_URL}} -H 'Content-Type: application/json' -d "${{env.REQ_JSON}}" -o ${{env.SCAN_VIOLATIONS_RESP_JSON}}
           cat ${{env.SCAN_VIOLATIONS_RESP_JSON}}
@@ -279,16 +291,22 @@ jobs:
           echo " " >> $GITHUB_STEP_SUMMARY
           echo " " 
           echo " - MVN Build: ${{env.BUILD_NAME}} / ${{env.BUILD_ID}} " >> $GITHUB_STEP_SUMMARY
-          echo " - Total violations for Build: $(cat ${{env.SCAN_VIOLATIONS_RESP_JSON}} | jq -r '.total_violations')"  >> $GITHUB_STEP_SUMMARY
+          export totalViolations=$(cat ${{env.SCAN_VIOLATIONS_RESP_JSON}} | jq -r '.total_violations')
+          echo " - Total violations for Build: $totalViolations"  >> $GITHUB_STEP_SUMMARY
           echo " - [API: Xray Get Violations](https://jfrog.com/help/r/xray-rest-apis/get-violations)"
           echo " " >> $GITHUB_STEP_SUMMARY
           echo " " >> $GITHUB_STEP_SUMMARY
 
-          echo " | issue_id | type | severity | watch_name | component_physical_paths | " >> $GITHUB_STEP_SUMMARY
-          echo " | :--- | :--- | :--- | :--- | :--- | " >> $GITHUB_STEP_SUMMARY
-          cat ${{env.SCAN_VIOLATIONS_RESP_JSON}} | jq -r '.violations[] | "\(.issue_id)|\(.violation_details_url)|\(.type)|\(.severity)|\(.watch_name)|\(.component_physical_paths | join("; "))|"' | while IFS='|' read -r issue_id violation_details_url type severity watch_name component_physical_paths; do
-            echo " | [$issue_id]($violation_details_url) | $type | $severity | $watch_name | $component_physical_paths | " >> $GITHUB_STEP_SUMMARY
-          done 
+          if [ "$totalViolations" -eq 0 ]; then
+            echo " - :no_good: :volcano: NO violations found" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Found $totalViolations violations"
+            echo " | Issue ID | Type | Severity | Policy's Watch name | Componen Paths | " >> $GITHUB_STEP_SUMMARY
+            echo " | :--- | :--- | :--- | :--- | :--- | " >> $GITHUB_STEP_SUMMARY
+            cat ${{env.SCAN_VIOLATIONS_RESP_JSON}} | jq -r '.violations[] | "\(.issue_id)|\(.violation_details_url)|\(.type)|\(.severity)|\(.watch_name)|\(.component_physical_paths | join("; "))|"' | while IFS='|' read -r issue_id violation_details_url type severity watch_name component_physical_paths; do
+              echo " | [$issue_id]($violation_details_url) | $type | $severity | $watch_name | $component_physical_paths | " >> $GITHUB_STEP_SUMMARY
+            done 
+          fi
           echo " " >> $GITHUB_STEP_SUMMARY
           echo " " >> $GITHUB_STEP_SUMMARY
 
@@ -344,16 +362,22 @@ jobs:
           echo " " >> $GITHUB_STEP_SUMMARY
           echo " " 
           echo " - MVN RBv2: ${{env.BUILD_NAME}} / ${{env.BUILD_ID}} " >> $GITHUB_STEP_SUMMARY
-          echo " - Total violations for RBv2: $(cat ${{env.SCAN_VIOLATIONS_RESP_JSON}} | jq -r '.total_violations')"  >> $GITHUB_STEP_SUMMARY
+          export totalViolations=$(cat ${{env.SCAN_VIOLATIONS_RESP_JSON}} | jq -r '.total_violations')
+          echo " - Total violations for RBv2: $totalViolations"  >> $GITHUB_STEP_SUMMARY
           echo " - [API: Xray Get Violations](https://jfrog.com/help/r/xray-rest-apis/get-violations)"
           echo " " >> $GITHUB_STEP_SUMMARY
           echo " " >> $GITHUB_STEP_SUMMARY
 
-          echo " | issue_id | type | severity | watch_name | component_physical_paths | " >> $GITHUB_STEP_SUMMARY
-          echo " | :--- | :--- | :--- | :--- | :--- | " >> $GITHUB_STEP_SUMMARY
-          cat ${{env.SCAN_VIOLATIONS_RESP_JSON}} | jq -r '.violations[] | "\(.issue_id)|\(.violation_details_url)|\(.type)|\(.severity)|\(.watch_name)|\(.component_physical_paths | join("; "))|"' | while IFS='|' read -r issue_id violation_details_url type severity watch_name component_physical_paths; do
-            echo " | [$issue_id]($violation_details_url) | $type | $severity | $watch_name | $component_physical_paths | " >> $GITHUB_STEP_SUMMARY
-          done 
+          if [ "$totalViolations" -eq 0 ]; then
+            echo " - :no_good: :volcano: NO violations found" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Found $totalViolations violations"
+            echo " | Issue ID | Type | Severity | Policy's Watch name | Component Path | " >> $GITHUB_STEP_SUMMARY
+            echo " | :--- | :--- | :--- | :--- | :--- | " >> $GITHUB_STEP_SUMMARY
+            cat ${{env.SCAN_VIOLATIONS_RESP_JSON}} | jq -r '.violations[] | "\(.issue_id)|\(.violation_details_url)|\(.type)|\(.severity)|\(.watch_name)|\(.component_physical_paths | join("; "))|"' | while IFS='|' read -r issue_id violation_details_url type severity watch_name component_physical_paths; do
+              echo " | [$issue_id]($violation_details_url) | $type | $severity | $watch_name | $component_physical_paths | " >> $GITHUB_STEP_SUMMARY
+            done 
+          fi
           echo " " >> $GITHUB_STEP_SUMMARY
           echo " " >> $GITHUB_STEP_SUMMARY
 
@@ -402,7 +426,8 @@ jobs:
           echo " " >> $GITHUB_STEP_SUMMARY
           echo "## :bug: :worm: :beetle: LICENSES :ghost:" >> $GITHUB_STEP_SUMMARY
           echo " " >> $GITHUB_STEP_SUMMARY
-          echo " - Total licenses usage for the build: $(cat ${{env.RESP_JSON}} | jq -r '.licenses | length')" >> $GITHUB_STEP_SUMMARY
+          export totalLicenses=$(cat ${{env.RESP_JSON}} | jq -r '.licenses | length')
+          echo " - Total licenses usage for the build: $totalLicenses" >> $GITHUB_STEP_SUMMARY
           echo " - Licenses: " >> $GITHUB_STEP_SUMMARY
           cat ${{env.RESP_JSON}} | jq -r '.licenses[].name' | sort -u | while read -r license; do
               echo "   - $license" >> $GITHUB_STEP_SUMMARY
@@ -413,33 +438,38 @@ jobs:
           echo "## :bug: :worm: :beetle: OPERATIONAL RISKS :ghost:" >> $GITHUB_STEP_SUMMARY
           echo " " >> $GITHUB_STEP_SUMMARY
           echo " " >> $GITHUB_STEP_SUMMARY
-          echo " - Total operational risks for the build: $(cat ${{env.RESP_JSON}} | jq -r '.operational_risks | length')" >> $GITHUB_STEP_SUMMARY
+          export totalOpsRisks=$(cat ${{env.RESP_JSON}} | jq -r '.operational_risks | length')
+          echo " - Total operational risks for the build: $totalOpsRisks" >> $GITHUB_STEP_SUMMARY
           echo " " >> $GITHUB_STEP_SUMMARY
           echo " " >> $GITHUB_STEP_SUMMARY
-          echo " | component | current version | risk | latest version | released | " >> $GITHUB_STEP_SUMMARY
-          echo " | :--- | :--- | :--- | :--- | :--- | " >> $GITHUB_STEP_SUMMARY
+          if [ "$totalOpsRisks" -eq 0 ]; then
+            echo " - :no_good: :volcano: NO operational risks found" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Found $totalOpsRisks operational risks"
+            echo " | Component | Current Version | Risk | Latest Version | Released | " >> $GITHUB_STEP_SUMMARY
+            echo " | :--- | :--- | :--- | :--- | :--- | " >> $GITHUB_STEP_SUMMARY
 
-          # Function to extract package name and version from component_id
-          extract_component_info() {
-              local component_id="$1"
-              # Remove protocol prefix (e.g., "npm://" or "gav://")
-              local without_protocol="${component_id#*://}"
-              # Extract package name (everything before the last colon)
-              local package_name="${without_protocol%:*}"
-              # Extract version (everything after the last colon)
-              local version="${without_protocol##*:}"
-              echo "$package_name|$version"
-          }
+            # Function to extract package name and version from component_id
+            extract_component_info() {
+                local component_id="$1"
+                # Remove protocol prefix (e.g., "npm://" or "gav://")
+                local without_protocol="${component_id#*://}"
+                # Extract package name (everything before the last colon)
+                local package_name="${without_protocol%:*}"
+                # Extract version (everything after the last colon)
+                local version="${without_protocol##*:}"
+                echo "$package_name|$version"
+            }
 
-          cat ${{env.RESP_JSON}} | jq -r '.operational_risks[] | "\(.component_id)|\(.current_version)|\(.risk)|\(.latest_version)|\(.released)|"' | while IFS='|' read -r component_id current_version risk latest_version released; do
-              # Extract package name and version from component_id
-              component_info=$(extract_component_info "$component_id")
-              component_name=$(echo "$component_info" | cut -d'|' -f1)
-              component_version=$(echo "$component_info" | cut -d'|' -f2)
+            cat ${{env.RESP_JSON}} | jq -r '.operational_risks[] | "\(.component_id)|\(.current_version)|\(.risk)|\(.latest_version)|\(.released)|"' | while IFS='|' read -r component_id current_version risk latest_version released; do
+                # Extract package name and version from component_id
+                component_info=$(extract_component_info "$component_id")
+                component_name=$(echo "$component_info" | cut -d'|' -f1)
+                component_version=$(echo "$component_info" | cut -d'|' -f2)
 
-              echo " | $component_name | $component_version | $risk | $latest_version | $released | " >> $GITHUB_STEP_SUMMARY
-          done
-
+                echo " | $component_name | $component_version | $risk | $latest_version | $released | " >> $GITHUB_STEP_SUMMARY
+            done
+          fi
           echo " " >> $GITHUB_STEP_SUMMARY
           echo " " >> $GITHUB_STEP_SUMMARY
               
@@ -496,16 +526,22 @@ jobs:
           echo " " >> $GITHUB_STEP_SUMMARY
           echo " " 
           echo " - Docker Build: ${{env.BUILD_NAME}} / ${{env.BUILD_ID}} " >> $GITHUB_STEP_SUMMARY
-          echo " - Total violations for Docker Build: $(cat ${{env.SCAN_VIOLATIONS_RESP_JSON}} | jq -r '.total_violations')"  >> $GITHUB_STEP_SUMMARY
+          export total_violations=$(cat ${{env.SCAN_VIOLATIONS_RESP_JSON}} | jq -r '.total_violations')
+          echo " - Total violations for Docker Build: $total_violations"  >> $GITHUB_STEP_SUMMARY
           echo " - [API: Xray Get Violations](https://jfrog.com/help/r/xray-rest-apis/get-violations)"
           echo " " >> $GITHUB_STEP_SUMMARY
           echo " " >> $GITHUB_STEP_SUMMARY
 
-          echo " | issue_id | type | severity | watch_name | component_physical_paths | " >> $GITHUB_STEP_SUMMARY
-          echo " | :--- | :--- | :--- | :--- | :--- | " >> $GITHUB_STEP_SUMMARY
-          cat ${{env.SCAN_VIOLATIONS_RESP_JSON}} | jq -r '.violations[] | "\(.issue_id)|\(.violation_details_url)|\(.type)|\(.severity)|\(.watch_name)|\(.component_physical_paths | join("; "))|"' | while IFS='|' read -r issue_id violation_details_url type severity watch_name component_physical_paths; do
-            echo " | [$issue_id]($violation_details_url) | $type | $severity | $watch_name | $component_physical_paths | " >> $GITHUB_STEP_SUMMARY
-          done 
+          if [ "$total_violations" -eq 0 ]; then
+            echo " - :no_good: :volcano: NO violations found" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Found $total_violations violations"
+            echo " | Issue ID | Type | Severity | Policy's Watch name | Component Path | " >> $GITHUB_STEP_SUMMARY
+            echo " | :--- | :--- | :--- | :--- | :--- | " >> $GITHUB_STEP_SUMMARY
+            cat ${{env.SCAN_VIOLATIONS_RESP_JSON}} | jq -r '.violations[] | "\(.issue_id)|\(.violation_details_url)|\(.type)|\(.severity)|\(.watch_name)|\(.component_physical_paths | join("; "))|"' | while IFS='|' read -r issue_id violation_details_url type severity watch_name component_physical_paths; do
+              echo " | [$issue_id]($violation_details_url) | $type | $severity | $watch_name | $component_physical_paths | " >> $GITHUB_STEP_SUMMARY
+            done 
+          fi
           echo " " >> $GITHUB_STEP_SUMMARY
           echo " " >> $GITHUB_STEP_SUMMARY
 
@@ -561,16 +597,22 @@ jobs:
           echo " " >> $GITHUB_STEP_SUMMARY
           echo " " 
           echo " - RBv2: ${{env.BUILD_NAME}} / ${{env.BUILD_ID}} " >> $GITHUB_STEP_SUMMARY
-          echo " - Total violations for RBv2: $(cat ${{env.SCAN_VIOLATIONS_RESP_JSON}} | jq -r '.total_violations')"  >> $GITHUB_STEP_SUMMARY
+          export total_violations=$(cat ${{env.SCAN_VIOLATIONS_RESP_JSON}} | jq -r '.total_violations')
+          echo " - Total violations for RBv2: $total_violations"  >> $GITHUB_STEP_SUMMARY
           echo " - [API: Xray Get Violations](https://jfrog.com/help/r/xray-rest-apis/get-violations)"
           echo " " >> $GITHUB_STEP_SUMMARY
           echo " " >> $GITHUB_STEP_SUMMARY
 
-          echo " | issue_id | type | severity | watch_name | component_physical_paths | " >> $GITHUB_STEP_SUMMARY
-          echo " | :--- | :--- | :--- | :--- | :--- | " >> $GITHUB_STEP_SUMMARY
-          cat ${{env.SCAN_VIOLATIONS_RESP_JSON}} | jq -r '.violations[] | "\(.issue_id)|\(.violation_details_url)|\(.type)|\(.severity)|\(.watch_name)|\(.component_physical_paths | join("; "))|"' | while IFS='|' read -r issue_id violation_details_url type severity watch_name component_physical_paths; do
-            echo " | [$issue_id]($violation_details_url) | $type | $severity | $watch_name | $component_physical_paths | " >> $GITHUB_STEP_SUMMARY
-          done 
+          if [ "$total_violations" -eq 0 ]; then
+            echo " - :no_good: :volcano: NO violations found" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Found $total_violations violations"
+            echo " | Issue ID | Type | Severity | Policy's Watch name | Component Path | " >> $GITHUB_STEP_SUMMARY
+            echo " | :--- | :--- | :--- | :--- | :--- | " >> $GITHUB_STEP_SUMMARY
+            cat ${{env.SCAN_VIOLATIONS_RESP_JSON}} | jq -r '.violations[] | "\(.issue_id)|\(.violation_details_url)|\(.type)|\(.severity)|\(.watch_name)|\(.component_physical_paths | join("; "))|"' | while IFS='|' read -r issue_id violation_details_url type severity watch_name component_physical_paths; do
+              echo " | [$issue_id]($violation_details_url) | $type | $severity | $watch_name | $component_physical_paths | " >> $GITHUB_STEP_SUMMARY
+            done 
+          fi
           echo " " >> $GITHUB_STEP_SUMMARY
           echo " " >> $GITHUB_STEP_SUMMARY
 
