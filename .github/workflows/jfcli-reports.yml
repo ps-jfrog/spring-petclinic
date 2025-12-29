@@ -84,9 +84,10 @@ jobs:
           echo " - GIT REPO URL: $REPO_FULL_URL" >> $GITHUB_STEP_SUMMARY
           echo " - Commited HASH: $COMMIT_HASH" >> $GITHUB_STEP_SUMMARY
           echo " - Repo Branch: $BRANCH" >> $GITHUB_STEP_SUMMARY
-          echo " - [API: Xray Build Summary](https://jfrog.com/help/r/xray-rest-apis/build-summary)"
+          echo " - [API: Xray Source Code Scanning](https://jfrog.com/help/r/xray-rest-apis/source-code)"
+          echo "   - [API: Get Git Repositories](https://jfrog.com/help/r/xray-rest-apis/get-git-repositories)"
+          echo "   - [API: Get Scan Results for a Commit](https://jfrog.com/help/r/xray-rest-apis/get-scan-results-for-a-commit)"
           echo " " >> $GITHUB_STEP_SUMMARY
-          
 
           # Get the list of frogbot repositories
           export GIT_REPO_JSON="./frogbot-repo.json"
