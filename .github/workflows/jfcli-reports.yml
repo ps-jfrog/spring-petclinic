@@ -84,9 +84,9 @@ jobs:
           echo " - GIT REPO URL: $REPO_FULL_URL" >> $GITHUB_STEP_SUMMARY
           echo " - Commited HASH: $COMMIT_HASH" >> $GITHUB_STEP_SUMMARY
           echo " - Repo Branch: $BRANCH" >> $GITHUB_STEP_SUMMARY
-          echo " - [API: Xray Source Code Scanning](https://jfrog.com/help/r/xray-rest-apis/source-code)"
-          echo "   - [API: Get Git Repositories](https://jfrog.com/help/r/xray-rest-apis/get-git-repositories)"
-          echo "   - [API: Get Scan Results for a Commit](https://jfrog.com/help/r/xray-rest-apis/get-scan-results-for-a-commit)"
+          echo " - API: Xray Source Code Scanning https://jfrog.com/help/r/xray-rest-apis/source-code"
+          echo "   - API: Get Git Repositories https://jfrog.com/help/r/xray-rest-apis/get-git-repositories"
+          echo "   - API: Get Scan Results for a Commit https://jfrog.com/help/r/xray-rest-apis/get-scan-results-for-a-commit"
           echo " " >> $GITHUB_STEP_SUMMARY
 
           # Get the list of frogbot repositories
@@ -183,7 +183,7 @@ jobs:
           echo " " >> $GITHUB_STEP_SUMMARY
           echo " " >> $GITHUB_STEP_SUMMARY
           echo " - Build ${{env.BUILD_NAME}}/${{env.BUILD_ID}} " 
-          echo " - [API: Xray Build Summary](https://jfrog.com/help/r/xray-rest-apis/build-summary)"
+          echo " - API: Xray Build Summary https://jfrog.com/help/r/xray-rest-apis/build-summary"
           echo " " >> $GITHUB_STEP_SUMMARY
           # echo "## :bug: :worm: :beetle: ISSUES :ghost:" >> $GITHUB_STEP_SUMMARY # TODO: Add issues report
         
@@ -294,7 +294,7 @@ jobs:
           echo " - MVN Build: ${{env.BUILD_NAME}} / ${{env.BUILD_ID}} " >> $GITHUB_STEP_SUMMARY
           export totalViolations=$(cat ${{env.SCAN_VIOLATIONS_RESP_JSON}} | jq -r '.total_violations')
           echo " - Total violations for Build: $totalViolations"  >> $GITHUB_STEP_SUMMARY
-          echo " - [API: Xray Get Violations](https://jfrog.com/help/r/xray-rest-apis/get-violations)"
+          echo " - API: Xray Get Violations https://jfrog.com/help/r/xray-rest-apis/get-violations"
           echo " " >> $GITHUB_STEP_SUMMARY
           echo " " >> $GITHUB_STEP_SUMMARY
 
@@ -365,7 +365,7 @@ jobs:
           echo " - MVN RBv2: ${{env.BUILD_NAME}} / ${{env.BUILD_ID}} " >> $GITHUB_STEP_SUMMARY
           export totalViolations=$(cat ${{env.SCAN_VIOLATIONS_RESP_JSON}} | jq -r '.total_violations')
           echo " - Total violations for RBv2: $totalViolations"  >> $GITHUB_STEP_SUMMARY
-          echo " - [API: Xray Get Violations](https://jfrog.com/help/r/xray-rest-apis/get-violations)"
+          echo " - API: Xray Get Violations https://jfrog.com/help/r/xray-rest-apis/get-violations"
           echo " " >> $GITHUB_STEP_SUMMARY
           echo " " >> $GITHUB_STEP_SUMMARY
 
@@ -420,7 +420,7 @@ jobs:
           echo " " >> $GITHUB_STEP_SUMMARY
           echo " " >> $GITHUB_STEP_SUMMARY
           echo " - Build ${{env.BUILD_NAME}}/${{env.BUILD_ID}} " 
-          echo " - [API: Xray Build Summary](https://jfrog.com/help/r/xray-rest-apis/build-summary)"
+          echo " - API: Xray Build Summary https://jfrog.com/help/r/xray-rest-apis/build-summary"
           echo " " >> $GITHUB_STEP_SUMMARY
           # echo "## :bug: :worm: :beetle: ISSUES :ghost:" >> $GITHUB_STEP_SUMMARY # TODO: Add issues report
         
@@ -529,7 +529,7 @@ jobs:
           echo " - Docker Build: ${{env.BUILD_NAME}} / ${{env.BUILD_ID}} " >> $GITHUB_STEP_SUMMARY
           export total_violations=$(cat ${{env.SCAN_VIOLATIONS_RESP_JSON}} | jq -r '.total_violations')
           echo " - Total violations for Docker Build: $total_violations"  >> $GITHUB_STEP_SUMMARY
-          echo " - [API: Xray Get Violations](https://jfrog.com/help/r/xray-rest-apis/get-violations)"
+          echo " - API: Xray Get Violations https://jfrog.com/help/r/xray-rest-apis/get-violations"
           echo " " >> $GITHUB_STEP_SUMMARY
           echo " " >> $GITHUB_STEP_SUMMARY
 
@@ -600,7 +600,7 @@ jobs:
           echo " - RBv2: ${{env.BUILD_NAME}} / ${{env.BUILD_ID}} " >> $GITHUB_STEP_SUMMARY
           export total_violations=$(cat ${{env.SCAN_VIOLATIONS_RESP_JSON}} | jq -r '.total_violations')
           echo " - Total violations for RBv2: $total_violations"  >> $GITHUB_STEP_SUMMARY
-          echo " - [API: Xray Get Violations](https://jfrog.com/help/r/xray-rest-apis/get-violations)"
+          echo " - API: Xray Get Violations https://jfrog.com/help/r/xray-rest-apis/get-violations"
           echo " " >> $GITHUB_STEP_SUMMARY
           echo " " >> $GITHUB_STEP_SUMMARY
 
