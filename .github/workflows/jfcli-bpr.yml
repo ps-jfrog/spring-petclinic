@@ -24,7 +24,7 @@ env:
   JUNIT_TEST_RESULTS_CONVERSION_SCRIPT: "./jfrog/convertXml2Json.sh"
 jobs:
   dockerPackage:
-    name: "Docker"
+    name: "Docker Package"
     env:  
       BUILD_ID: "bpr-dkr-${{github.run_number}}"
       RT_REPO_MVN_VIRTUAL: "springpetclinic-mvn-virtual"
@@ -307,7 +307,7 @@ jobs:
           jf xr curl /api/v2/ci/build -H 'Content-Type: application/json' -d '{"build_name": "${{env.BUILD_NAME}}", "build_number": "${{env.BUILD_ID}}","rescan":false  }'
 
   dockerBuildPromote2Dev:
-    name: "Docker: Build Promote to DEV"
+    name: "Build: Promote to DEV local repo"
     needs: dockerPackage
     runs-on: ubuntu-latest
     env:
@@ -347,7 +347,7 @@ jobs:
           sleep 2
 
   validateBuildDownloadFromDev:
-    name: "Docker: Validate Build Download from DEV"
+    name: "Validate: DEV local repo package"
     needs: dockerBuildPromote2Dev
     runs-on: ubuntu-latest
     env:
@@ -398,13 +398,14 @@ jobs:
           } >> "${GITHUB_STEP_SUMMARY}"
 
   addEvidenceToDev:
-    name: "Evidence: Dev Package"
+    name: "Evidence: attach to DEV package"
     needs: 
       - dockerBuildPromote2Dev
     runs-on: ubuntu-latest
     env:
       ENV_VAL: "DEV"
       BUILD_ID: "bpr-dkr-${{github.run_number}}"
+      EVD_SPEC_JSON: "evd-spec-dev.json"
       RT_REPO_DEV_LOCAL: "springpetclinic-docker-dev-local"
     defaults:
        run:
@@ -421,15 +422,15 @@ jobs:
           oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
           disable-job-summary: ${{env.JOB_SUMMARY}} 
   
-      - name: "Evidence: Add regression results for Build {{env.ENV_VAL}}"
+      - name: "Evidence: Add regression results for Build ${{env.ENV_VAL}}"
         run: |
-          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence", "build_promote_stage": "${{env.ENV_VAL}}", "regression": "100/100" }' > ./${{env.EVIDENCE_SPEC_JSON}}
-          cat ./${{env.EVIDENCE_SPEC_JSON}}
-          jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVIDENCE_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/promotion/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}}
+          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence", "build_promote_stage": "${{env.ENV_VAL}}", "dev-test": "100/100" }' > ./${{env.EVD_SPEC_JSON}}
+          cat ./${{env.EVD_SPEC_JSON}}
+          jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/signature/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}}
           #echo "    - Evidence for BUILD Publish attached. " >> $GITHUB_STEP_SUMMARY
 
   dockerBuildPromote2QA:
-    name: "Docker: Build Promote to QA"
+    name: "Build: Promote to QA local repo"
     needs: 
       - addEvidenceToDev
     runs-on: ubuntu-latest
@@ -465,7 +466,7 @@ jobs:
           jf rt bpr "${{ env.BUILD_NAME }}" "${{ env.BUILD_ID }}" "${{ env.RT_REPO_QA_LOCAL }}" --status="${STATUS_COMMENT}" --include-dependencies --copy
 
   validateBuildDownloadFromQA:
-    name: "Docker: Validate Build Download from QA"
+    name: "Validate: QA local repo package"
     needs: dockerBuildPromote2QA
     runs-on: ubuntu-latest
     env:
@@ -548,7 +549,7 @@ jobs:
            cat $BUILD_INFO_JSON
   
   addEvidenceToQA:
-    name: "Evidence: QA Package"
+    name: "Evidence: attach to QA package"
     needs: 
       - dockerBuildPromote2QA
     runs-on: ubuntu-latest
@@ -566,20 +567,21 @@ jobs:
         env:
           JF_URL: ${{env.JF_RT_URL}}
           JFROG_CLI_LOG_LEVEL: ${{env.JFROG_CLI_LOG_LEVEL}}
+          EVD_SPEC_JSON: "evd-spec-qa.json"
         with:
           version: latest  #2.71.0
           oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
           disable-job-summary: ${{env.JOB_SUMMARY}} 
   
-      - name: "Evidence: Add regression results for Build {{env.ENV_VAL}}"
+      - name: "Evidence: Add regression results for Build ${{env.ENV_VAL}}"
         run: |
-          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence", "build_promote_stage": "${{env.ENV_VAL}}", "regression": "100/100" }' > ./${{env.EVIDENCE_SPEC_JSON}}
-          cat ./${{env.EVIDENCE_SPEC_JSON}}
-          jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVIDENCE_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/promotion/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}}
+          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence", "build_promote_stage": "${{env.ENV_VAL}}", "qa-test": "100/100" }' > ./${{env.EVD_SPEC_JSON}}
+          cat ./${{env.EVD_SPEC_JSON}}
+          jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/signature/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}}
           #echo "    - Evidence for BUILD Publish attached. " >> $GITHUB_STEP_SUMMARY
 
   dockerBuildPromote2Prod:
-    name: "Docker: Build Promote to PROD"
+    name: "Build: Promote to PROD local repo"
     needs: 
       - addEvidenceToQA
     runs-on: ubuntu-latest
@@ -616,7 +618,7 @@ jobs:
           jf rt bpr "${{ env.BUILD_NAME }}" "${{ env.BUILD_ID }}" "${{ env.RT_REPO_PROD_LOCAL }}" --status="${STATUS_COMMENT}" --include-dependencies --copy
 
   validateBuildDownloadFromProd:
-    name: "Docker: Validate Build Download from PROD"
+    name: "Validate: PROD local repo package"
     needs: dockerBuildPromote2Prod
     runs-on: ubuntu-latest
     env:
@@ -667,7 +669,7 @@ jobs:
           } >> "${GITHUB_STEP_SUMMARY}"
 
   addEvidenceToProd:
-    name: "Evidence: PROD Package"
+    name: "Evidence: attach to PROD package"
     needs: 
       - dockerBuildPromote2Prod
     runs-on: ubuntu-latest
@@ -675,6 +677,7 @@ jobs:
       ENV_VAL: "PROD"
       BUILD_ID: "bpr-dkr-${{github.run_number}}"
       RT_REPO_PROD_LOCAL: "springpetclinic-docker-prod-local"
+      EVD_SPEC_JSON: "evd-spec-prod.json"
     defaults:
        run:
          working-directory: "${{env.DEFAULT_WORKSPACE}}"
@@ -689,12 +692,14 @@ jobs:
           version: latest  #2.71.0
           oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
           disable-job-summary: ${{env.JOB_SUMMARY}} 
-  
-      - name: "Evidence: Add regression results for Build {{env.ENV_VAL}}"
+
+      # prediction type promotion: https://jfrog.com/evidence/promotion/v1
+      # prediction type signature: https://jfrog.com/evidence/signature/v1
+      - name: "Evidence: Add regression results for Build ${{env.ENV_VAL}}"
         run: |
-          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence", "build_promote_stage": "${{env.ENV_VAL}}", "regression": "100/100" }' > ./${{env.EVIDENCE_SPEC_JSON}}
-          cat ./${{env.EVIDENCE_SPEC_JSON}}
-          jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVIDENCE_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/promotion/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}}
+          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence", "build_promote_stage": "${{env.ENV_VAL}}", "prod-test": "100/100" }' > ./${{env.EVD_SPEC_JSON}}
+          cat ./${{env.EVD_SPEC_JSON}}
+          jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/signature/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}}
           #echo "    - Evidence for BUILD Publish attached. " >> $GITHUB_STEP_SUMMARY
 
   dockerBuildPromotionSummary:

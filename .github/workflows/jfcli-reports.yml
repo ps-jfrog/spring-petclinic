@@ -643,26 +643,4 @@ jobs:
           version: latest 
           oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
 
-      - name: "Zero-Day: Log4J"
-        run: |
-          echo "# :frog: Zero-Day Vulnerabilities Report :pushpin:" >> $GITHUB_STEP_SUMMARY
-          echo " " >> $GITHUB_STEP_SUMMARY
-          echo " " >> $GITHUB_STEP_SUMMARY
-          echo " - Build: ${{env.BUILD_NAME}}" >> $GITHUB_STEP_SUMMARY
-          echo " -  Zero-Day: Log4J vulnerabilities https://www.cve.org/CVERecord/SearchResults?query=log4j" >> $GITHUB_STEP_SUMMARY
-          echo " " >> $GITHUB_STEP_SUMMARY
-
-          # Check for Log4j vulnerabilities
-          export LOG4J_VULN_JSON="log4j-vulnerabilities.json"
-          jf xr curl "/api/v1/summary/build?build_name=${{env.BUILD_NAME}}" -H 'Content-Type: application/json' -o $LOG4J_VULN_JSON
-          log4j_vuln_count=$(cat "$LOG4J_VULN_JSON" | jq -r '.vulnerabilities[] | select(.cve_id | test("CVE-2021-44228|CVE-2021-45046|CVE-2021-45105"))' | wc -l)
-
-          if [ "$log4j_vuln_count" -eq 0 ]; then
-              echo " - :no_good: :volcano: NO Log4j vulnerabilities found" >> $GITHUB_STEP_SUMMARY
-          else
-              echo "Found $log4j_vuln_count Log4j vulnerabilities" >> $GITHUB_STEP_SUMMARY
-              echo " | CVE ID | Component | Version | Severity | Description | " >> $GITHUB_STEP_SUMMARY
-              echo " | :--- | :--- | :--- | :--- | :--- | " >> $GITHUB_STEP_SUMMARY
-
-              cat "$LOG4J_VULN_JSON" | jq -r '.vulnerabilities[] | select(.cve_id | test("CVE-2021-44228|CVE-2021-45046|CVE-2021-45105")) | "\(.cve_id)|\(.component_name)|\(.component_version)|\(.severity)|\(.description)|"' | while IFS='|' read -r cve_id component_name component_version severity description; do
-                  echo " | [$cve_id](https
+     

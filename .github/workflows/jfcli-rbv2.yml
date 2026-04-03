@@ -9,6 +9,7 @@ permissions:
   attestations: write
 env:
   JF_RT_URL: "https://${{vars.JF_NAME}}.jfrog.io"
+  PROJECT_KEY: "krishna-apptrust"
   BUILD_NAME: "spring-petclinic" # spring-petclinic-3.5.0-SNAPSHOT.jar
   APP_TRUST_BUILD_NAME: "AppTrust-spring-petclinic"
   JOB_SUMMARY: false
