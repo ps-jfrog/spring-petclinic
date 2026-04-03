@@ -340,8 +340,8 @@ jobs:
         env:
           STATUS_COMMENT: "Promoting: Docker SNAPSHOT to DEV local"
         run: |
-          jf rt bpr "${{ env.BUILD_NAME }}" "${{ env.BUILD_ID }}" "${{ env.RT_REPO_DEV_LOCAL }}" --status="${STATUS_COMMENT}" --include-dependencies --copy
-
+          jf rt bpr "${{ env.BUILD_NAME }}" "${{ env.BUILD_ID }}" "${{ env.RT_REPO_DEV_LOCAL }}" --status="${STATUS_COMMENT}" --include-dependencies
+      
       - name: "Sleep to Sync"
         run: |
           sleep 2
@@ -406,7 +406,6 @@ jobs:
       ENV_VAL: "DEV"
       BUILD_ID: "bpr-dkr-${{github.run_number}}"
       EVD_SPEC_JSON: "evd-spec-dev.json"
-      RT_REPO_DEV_LOCAL: "springpetclinic-docker-dev-local"
     defaults:
        run:
          working-directory: "${{env.DEFAULT_WORKSPACE}}"
@@ -421,10 +420,10 @@ jobs:
           version: latest  #2.71.0
           oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
           disable-job-summary: ${{env.JOB_SUMMARY}} 
-  
+      
       - name: "Evidence: Add regression results for Build ${{env.ENV_VAL}}"
         run: |
-          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence", "build_promote_stage": "${{env.ENV_VAL}}", "dev-test": "100/100" }' > ./${{env.EVD_SPEC_JSON}}
+          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence", "build_promote_stage": "${{env.ENV_VAL}}", "qa-test": "100/100" }' > ./${{env.EVD_SPEC_JSON}}
           cat ./${{env.EVD_SPEC_JSON}}
           jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/signature/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}}
           #echo "    - Evidence for BUILD Publish attached. " >> $GITHUB_STEP_SUMMARY
@@ -463,7 +462,11 @@ jobs:
         env:
           STATUS_COMMENT: "Promoting: Docker DEV to QA local"
         run: |
-          jf rt bpr "${{ env.BUILD_NAME }}" "${{ env.BUILD_ID }}" "${{ env.RT_REPO_QA_LOCAL }}" --status="${STATUS_COMMENT}" --include-dependencies --copy
+          jf rt bpr "${{ env.BUILD_NAME }}" "${{ env.BUILD_ID }}" "${{ env.RT_REPO_QA_LOCAL }}" --status="${STATUS_COMMENT}" --include-dependencies 
+
+      - name: "Sleep to Sync"
+        run: |
+          sleep 2
 
   validateBuildDownloadFromQA:
     name: "Validate: QA local repo package"
@@ -556,7 +559,7 @@ jobs:
     env:
       ENV_VAL: "QA"
       BUILD_ID: "bpr-dkr-${{github.run_number}}"
-      RT_REPO_QA_LOCAL: "springpetclinic-docker-qa-local"
+      EVD_SPEC_JSON: "evd-spec-qa.json"
     defaults:
        run:
          working-directory: "${{env.DEFAULT_WORKSPACE}}"
@@ -615,7 +618,11 @@ jobs:
         env:
           STATUS_COMMENT: "Promoting: Docker QA to PROD local"
         run: |
-          jf rt bpr "${{ env.BUILD_NAME }}" "${{ env.BUILD_ID }}" "${{ env.RT_REPO_PROD_LOCAL }}" --status="${STATUS_COMMENT}" --include-dependencies --copy
+          jf rt bpr "${{ env.BUILD_NAME }}" "${{ env.BUILD_ID }}" "${{ env.RT_REPO_PROD_LOCAL }}" --status="${STATUS_COMMENT}" --include-dependencies
+
+      - name: "Sleep to Sync"
+        run: |
+          sleep 2
 
   validateBuildDownloadFromProd:
     name: "Validate: PROD local repo package"
@@ -648,7 +655,7 @@ jobs:
         run: |
           n="$(find "${{env.DOWNLOAD_TARGET_PATH}}" -type f | wc -l | tr -d ' ')"
           if [[ "${n}" -lt 1 ]]; then
-            echo "::error::No files in ${{env.RT_REPO_QA_LOCAL}} for build ${{env.BUILD_NAME}}/${{env.BUILD_ID}}. Check bpr --copy and build properties on promoted artifacts."
+            echo "::error::No files in ${{env.RT_REPO_PROD_LOCAL}} for build ${{env.BUILD_NAME}}/${{env.BUILD_ID}}. Check bpr --copy and build properties on promoted artifacts."
             exit 1
           fi
           echo "OK: ${n} file(s) → ${{env.DOWNLOAD_TARGET_PATH}}"
