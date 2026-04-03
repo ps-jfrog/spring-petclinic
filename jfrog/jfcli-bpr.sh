@@ -19,7 +19,7 @@ jf rt bp ${BUILD_NAME} ${BUILD_ID} --detailed-summary=true
 sleep 2
 echo "\n*** Build Promote: SNAPSHOT to DEV\n"
 # jf rt bpr spring-petclinic cmd.2026-03-19-10-52  --dry-run --source-repo=springpetclinic-mvn-dev-local --comment="Promoting build SNAPSHOT to DEV" --status
-jf rt bpr ${BUILD_NAME} ${BUILD_ID} --source-repo=${RT_REPO_DEV_LOCAL} --comment="Promoting build SNAPSHOT to DEV" --status 
+jf rt bpr ${BUILD_NAME} ${BUILD_ID} ${RT_REPO_DEV_LOCAL} --status="Promoting build SNAPSHOT to DEV" 
 
 sleep 2
 jf -v

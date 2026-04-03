@@ -3,7 +3,8 @@ name: "JFrog: Security Reports"
 on: 
   workflow_run:
     workflows: 
-      - "JFCLI: JAVA"
+      - "JFCLI: Build Promote"
+      # - "JFCLI: RLM - RBv2"
     types: [completed]
 permissions:
   pull-requests: write

@@ -25,7 +25,7 @@ jobs:
   dockerPackage:
     name: "Docker"
     env:  
-      BUILD_ID: "psj-at-dkr-${{github.run_number}}"
+      BUILD_ID: "at-dkr-${{github.run_number}}"
       RT_REPO_MVN_VIRTUAL: "krishna-apptrust-java-virtual" #"${{env.PROJECT_KEY}}-java-virtual" # "krishna-apptrust-java-virtual"
       # RT_REPO_MVN_DEFAULT_LOCAL: "krishna-apptrust-java-init-local"  # krishna-apptrust-java-dev-local, krishna-apptrust-java-qa-local, krishna-apptrust-java-prod-local
       RT_REPO_DOCKER_VIRTUAL: "krishna-apptrust-docker-virtual" # "${{env.PROJECT_KEY}}-docker-virtual" # "krishna-apptrust-docker-virtual"
@@ -36,7 +36,6 @@ jobs:
     defaults:
        run:
          working-directory: "${{env.DEFAULT_WORKSPACE}}"
-
     runs-on: ubuntu-latest
     timeout-minutes: 30   # ref  https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#jobsjob_idtimeout-minutes
     steps:
@@ -343,7 +342,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       RBv2_ENV_VAL: "DEV"
-      BUILD_ID: "psj-at-dkr-${{github.run_number}}"
+      BUILD_ID: "at-dkr-${{github.run_number}}"
       RT_REPO_DEV_LOCAL: "krishna-apptrust-docker-dev-local" # "${{env.PROJECT_KEY}}-docker-dev-local"
       # krishna-apptrust-docker-dev-local, krishna-apptrust-docker-qa-local, krishna-apptrust-docker-prod-local
       TYPE_PROMOTE: "MOVE" # COPY, MOVE

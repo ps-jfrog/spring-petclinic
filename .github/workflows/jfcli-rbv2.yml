@@ -1,4 +1,4 @@
-name: "JFCLI: JAVA"
+name: "JFCLI: RLM - RBv2"
 on: push
 permissions:
   actions: read # for detecting the Github Actions environment.
@@ -26,7 +26,7 @@ jobs:
   dockerPackage:
     name: "Docker"
     env:  
-      BUILD_ID: "psj-dkr-${{github.run_number}}"
+      BUILD_ID: "rbv2-dkr-${{github.run_number}}"
       RT_REPO_MVN_VIRTUAL: "springpetclinic-mvn-virtual"
       # RT_REPO_MVN_DEFAULT_LOCAL: "springpetclinic-mvn-snapshot-local"  # springpetclinic-mvn-dev-local, springpetclinic-mvn-qa-local, springpetclinic-mvn-prod-local
       RT_REPO_DOCKER_VIRTUAL: "springpetclinic-docker-virtual"
@@ -346,7 +346,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       RBv2_ENV_VAL: "DEV"
-      BUILD_ID: "psj-dkr-${{github.run_number}}"
+      BUILD_ID: "rbv2-dkr-${{github.run_number}}"
       RT_REPO_DEV_LOCAL: "springpetclinic-docker-dev-local"
       TYPE_PROMOTE: "COPY"
     defaults:
@@ -387,7 +387,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       RBv2_ENV_VAL: "QA"
-      BUILD_ID: "psj-dkr-${{github.run_number}}"
+      BUILD_ID: "rbv2-dkr-${{github.run_number}}"
       RT_REPO_QA_LOCAL: "springpetclinic-docker-qa-local"
     defaults:
        run:
@@ -427,7 +427,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       RBv2_ENV_VAL: "PROD"
-      BUILD_ID: "psj-dkr-${{github.run_number}}"
+      BUILD_ID: "rbv2-dkr-${{github.run_number}}"
       RT_REPO_PROD_LOCAL: "springpetclinic-docker-prod-local"
     defaults:
        run:
@@ -498,7 +498,7 @@ jobs:
     needs: dockerRBv2PromoteProd
     runs-on: ubuntu-latest
     env:
-      BUILD_ID: "psj-dkr-${{github.run_number}}"
+      BUILD_ID: "rbv2-dkr-${{github.run_number}}"
     defaults:
        run:
          working-directory: "${{env.DEFAULT_WORKSPACE}}"
@@ -569,7 +569,7 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     env:
-      BUILD_ID: "psj-dkr-${{github.run_number}}"
+      BUILD_ID: "rbv2-dkr-${{github.run_number}}"
     defaults:
        run:
          working-directory: "${{env.DEFAULT_WORKSPACE}}"
@@ -611,7 +611,7 @@ jobs:
     continue-on-error: true
     env:
       JF_URL: "https://${{vars.JF_NAME_2}}.jfrog.io"
-      BUILD_ID: "psj-dkr-${{github.run_number}}"
+      BUILD_ID: "rbv2-dkr-${{github.run_number}}"
     defaults:
         run:
           working-directory: "${{env.DEFAULT_WORKSPACE}}"
@@ -656,7 +656,7 @@ jobs:
          working-directory: "${{env.DEFAULT_WORKSPACE}}"
     env:
       JF_EDGE_URL: "https://${{vars.JF_EDGE_NAME}}.jfrog.io"
-      BUILD_ID: "psj-dkr-${{github.run_number}}"
+      BUILD_ID: "rbv2-dkr-${{github.run_number}}"
     steps:
       - name: "Setup JFrog CLI"
         uses: jfrog/setup-jfrog-cli@v4
@@ -692,7 +692,7 @@ jobs:
   mvnPackage:
     name: "MVN Package"
     env: 
-      BUILD_ID: "psj-mvn-${{github.run_number}}"
+      BUILD_ID: "rbv2-mvn-${{github.run_number}}"
       RT_REPO_MVN_VIRTUAL: "springpetclinic-mvn-virtual"  
       RT_REPO_MVN_DEFAULT_LOCAL: "springpetclinic-mvn-snapshot-local"  # springpetclinic-mvn-dev-local, springpetclinic-mvn-qa-local, springpetclinic-mvn-prod-local
       RT_REPO_DEV_LOCAL: "springpetclinic-mvn-dev-local"
@@ -938,7 +938,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       RBv2_ENV_VAL: "DEV"
-      BUILD_ID: "psj-mvn-${{github.run_number}}"
+      BUILD_ID: "rbv2-mvn-${{github.run_number}}"
       RT_REPO_MVN_VIRTUAL: "springpetclinic-mvn-virtual"  
       RT_REPO_DEV_LOCAL: "springpetclinic-mvn-dev-local"
     defaults:
@@ -979,7 +979,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       RBv2_ENV_VAL: "QA"
-      BUILD_ID: "psj-mvn-${{github.run_number}}"
+      BUILD_ID: "rbv2-mvn-${{github.run_number}}"
       RT_REPO_QA_LOCAL: "springpetclinic-mvn-qa-local"
     defaults:
         run:
@@ -1019,7 +1019,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       RBv2_ENV_VAL: "PROD"
-      BUILD_ID: "psj-mvn-${{github.run_number}}"
+      BUILD_ID: "rbv2-mvn-${{github.run_number}}"
       RT_REPO_PROD_LOCAL: "springpetclinic-mvn-prod-local"
     defaults:
         run:
@@ -1090,7 +1090,7 @@ jobs:
     needs: mvnRBv2PromoteProd
     runs-on: ubuntu-latest
     env:
-      BUILD_ID: "psj-mvn-${{github.run_number}}"
+      BUILD_ID: "rbv2-mvn-${{github.run_number}}"
     defaults:
         run:
           working-directory: "${{env.DEFAULT_WORKSPACE}}"
@@ -1161,7 +1161,7 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     env:
-      BUILD_ID: "psj-mvn-${{github.run_number}}"
+      BUILD_ID: "rbv2-mvn-${{github.run_number}}"
     defaults:
         run:
           working-directory: "${{env.DEFAULT_WORKSPACE}}"
@@ -1203,7 +1203,7 @@ jobs:
     continue-on-error: true
     env:
       JF_URL: "https://${{vars.JF_NAME_2}}.jfrog.io"
-      BUILD_ID: "psj-mvn-${{github.run_number}}"
+      BUILD_ID: "rbv2-mvn-${{github.run_number}}"
     defaults:
         run:
           working-directory: "${{env.DEFAULT_WORKSPACE}}"
@@ -1248,7 +1248,7 @@ jobs:
           working-directory: "${{env.DEFAULT_WORKSPACE}}"
     env:
       JF_EDGE_URL: "https://${{vars.JF_EDGE_NAME}}.jfrog.io"
-      BUILD_ID: "psj-mvn-${{github.run_number}}"
+      BUILD_ID: "rbv2-mvn-${{github.run_number}}"
     steps:
       - name: "Setup JFrog CLI"
         uses: jfrog/setup-jfrog-cli@v4
@@ -1287,7 +1287,7 @@ jobs:
     env:  
       RT_REPO_GRADLE_VIRTUAL: 'springpetclinic-gradle-virtual'
       RT_REPO_GRADLE_DEFAULT_LOCAL: 'springpetclinic-gradle-snapshot-fed-local'  # springpetclinic-gradle-dev-fed-local
-      BUILD_ID: "psj-gdl-${{github.run_number}}" 
+      BUILD_ID: "rbv2-gdl-${{github.run_number}}" 
     runs-on: ubuntu-latest
     timeout-minutes: 20   # ref  https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#jobsjob_idtimeout-minutes
     defaults:
