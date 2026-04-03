@@ -340,7 +340,7 @@ jobs:
         env:
           STATUS_COMMENT: "Promoting: Docker SNAPSHOT to DEV local"
         run: |
-          jf rt bpr "${{ env.BUILD_NAME }}" "${{ env.BUILD_ID }}" "${{ env.RT_REPO_DEV_LOCAL }}" --status="${STATUS_COMMENT}"  --include-dependencies  
+          jf rt bpr "${{ env.BUILD_NAME }}" "${{ env.BUILD_ID }}" "${{ env.RT_REPO_DEV_LOCAL }}" --status="${STATUS_COMMENT}" --include-dependencies
 
       - name: "Sleep to Sync"
         run: |
@@ -399,7 +399,9 @@ jobs:
 
   dockerBuildPromote2QA:
     name: "Docker: Build Promote to QA"
-    needs: dockerBuildPromote2Dev
+    needs: 
+      - dockerBuildPromote2Dev
+      - validateBuildDownloadFromDev
     runs-on: ubuntu-latest
     env:
       ENV_VAL: "QA"
@@ -430,7 +432,7 @@ jobs:
         env:
           STATUS_COMMENT: "Promoting: Docker DEV to QA local"
         run: |
-          jf rt bpr "${{ env.BUILD_NAME }}" "${{ env.BUILD_ID }}" "${{ env.RT_REPO_QA_LOCAL }}" --status="${STATUS_COMMENT}"  --include-dependencies  
+          jf rt bpr "${{ env.BUILD_NAME }}" "${{ env.BUILD_ID }}" "${{ env.RT_REPO_QA_LOCAL }}" --status="${STATUS_COMMENT}" --include-dependencies   
 
   validateBuildDownloadFromQA:
     name: "Docker: Validate Build Download from QA"
@@ -517,7 +519,9 @@ jobs:
   
   dockerBuildPromote2Prod:
     name: "Docker: Build Promote to PROD"
-    needs: dockerBuildPromote2QA
+    needs: 
+      - dockerBuildPromote2QA
+      - validateBuildDownloadFromQA
     runs-on: ubuntu-latest
     env:
       ENV_VAL: "PROD"
@@ -544,11 +548,12 @@ jobs:
         run: |
           jf bs ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --fail=false --format=table --extended-table=true --vuln=true
 
+       # https://docs.jfrog.com/artifactory/docs/build-integration#promoting-a-build
       - name: "Build promote ${{env.ENV_VAL}}"
         env:
           STATUS_COMMENT: "Promoting: Docker QA to PROD local"
         run: |
-          jf rt bpr "${{ env.BUILD_NAME }}" "${{ env.BUILD_ID }}" "${{ env.RT_REPO_PROD_LOCAL }}" --status="${STATUS_COMMENT}"  --include-dependencies  
+          jf rt bpr "${{ env.BUILD_NAME }}" "${{ env.BUILD_ID }}" "${{ env.RT_REPO_PROD_LOCAL }}" --status="${STATUS_COMMENT}" --include-dependencies
 
   validateBuildDownloadFromProd:
     name: "Docker: Validate Build Download from PROD"
