@@ -4,7 +4,7 @@ on:
   workflow_run:
     workflows: 
       - "JFCLI: Build Promote"
-      # - "JFCLI: RLM - RBv2"
+      - "JFCLI: RLM - RBv2"
     types: [completed]
 permissions:
   pull-requests: write
@@ -618,4 +618,51 @@ jobs:
           echo " " >> $GITHUB_STEP_SUMMARY
           echo " " >> $GITHUB_STEP_SUMMARY
 
-    
+  zero-day-report:
+    name: "Xray & JAS: Zero-Day Vulnerabilities Report"
+    runs-on: ubuntu-latest
+    env:
+      BUILD_NAME: "spring-petclinic"
+    steps:
+      - name: "Install prereqs tools"
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq yq
+          sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/local/bin/yq
+          sudo chmod +x /usr/local/bin/yq 
+          yq --version
+          jq --version
+
+      - name: "Setup JFrog CLI"
+        uses: jfrog/setup-jfrog-cli@v4
+        id: setup-cli
+        env:
+          JF_URL: ${{env.JF_RT_URL}}
+          JFROG_CLI_LOG_LEVEL: ${{env.JFROG_CLI_LOG_LEVEL}}
+        with:
+          version: latest 
+          oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
+
+      - name: "Zero-Day: Log4J"
+        run: |
+          echo "# :frog: Zero-Day Vulnerabilities Report :pushpin:" >> $GITHUB_STEP_SUMMARY
+          echo " " >> $GITHUB_STEP_SUMMARY
+          echo " " >> $GITHUB_STEP_SUMMARY
+          echo " - Build: ${{env.BUILD_NAME}}" >> $GITHUB_STEP_SUMMARY
+          echo " -  Zero-Day: Log4J vulnerabilities https://www.cve.org/CVERecord/SearchResults?query=log4j" >> $GITHUB_STEP_SUMMARY
+          echo " " >> $GITHUB_STEP_SUMMARY
+
+          # Check for Log4j vulnerabilities
+          export LOG4J_VULN_JSON="log4j-vulnerabilities.json"
+          jf xr curl "/api/v1/summary/build?build_name=${{env.BUILD_NAME}}" -H 'Content-Type: application/json' -o $LOG4J_VULN_JSON
+          log4j_vuln_count=$(cat "$LOG4J_VULN_JSON" | jq -r '.vulnerabilities[] | select(.cve_id | test("CVE-2021-44228|CVE-2021-45046|CVE-2021-45105"))' | wc -l)
+
+          if [ "$log4j_vuln_count" -eq 0 ]; then
+              echo " - :no_good: :volcano: NO Log4j vulnerabilities found" >> $GITHUB_STEP_SUMMARY
+          else
+              echo "Found $log4j_vuln_count Log4j vulnerabilities" >> $GITHUB_STEP_SUMMARY
+              echo " | CVE ID | Component | Version | Severity | Description | " >> $GITHUB_STEP_SUMMARY
+              echo " | :--- | :--- | :--- | :--- | :--- | " >> $GITHUB_STEP_SUMMARY
+
+              cat "$LOG4J_VULN_JSON" | jq -r '.vulnerabilities[] | select(.cve_id | test("CVE-2021-44228|CVE-2021-45046|CVE-2021-45105")) | "\(.cve_id)|\(.component_name)|\(.component_version)|\(.severity)|\(.description)|"' | while IFS='|' read -r cve_id component_name component_version severity description; do
+                  echo " | [$cve_id](https

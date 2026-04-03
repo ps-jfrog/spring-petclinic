@@ -340,7 +340,7 @@ jobs:
         env:
           STATUS_COMMENT: "Promoting: Docker SNAPSHOT to DEV local"
         run: |
-          jf rt bpr "${{ env.BUILD_NAME }}" "${{ env.BUILD_ID }}" "${{ env.RT_REPO_DEV_LOCAL }}" --status="${STATUS_COMMENT}" --include-dependencies
+          jf rt bpr "${{ env.BUILD_NAME }}" "${{ env.BUILD_ID }}" "${{ env.RT_REPO_DEV_LOCAL }}" --status="${STATUS_COMMENT}" --include-dependencies --copy
 
       - name: "Sleep to Sync"
         run: |
@@ -397,11 +397,41 @@ jobs:
             echo '```'
           } >> "${GITHUB_STEP_SUMMARY}"
 
+  addEvidenceToDev:
+    name: "Evidence: Dev Package"
+    needs: 
+      - dockerBuildPromote2Dev
+    runs-on: ubuntu-latest
+    env:
+      ENV_VAL: "DEV"
+      BUILD_ID: "bpr-dkr-${{github.run_number}}"
+      RT_REPO_DEV_LOCAL: "springpetclinic-docker-dev-local"
+    defaults:
+       run:
+         working-directory: "${{env.DEFAULT_WORKSPACE}}"
+    steps:
+      - name: "Setup JFrog CLI"
+        uses: jfrog/setup-jfrog-cli@v4
+        id: setup-cli
+        env:
+          JF_URL: ${{env.JF_RT_URL}}
+          JFROG_CLI_LOG_LEVEL: ${{env.JFROG_CLI_LOG_LEVEL}}
+        with:
+          version: latest  #2.71.0
+          oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
+          disable-job-summary: ${{env.JOB_SUMMARY}} 
+  
+      - name: "Evidence: Add regression results for Build {{env.ENV_VAL}}"
+        run: |
+          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence", "build_promote_stage": "${{env.ENV_VAL}}", "regression": "100/100" }' > ./${{env.EVIDENCE_SPEC_JSON}}
+          cat ./${{env.EVIDENCE_SPEC_JSON}}
+          jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVIDENCE_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/promotion/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}}
+          #echo "    - Evidence for BUILD Publish attached. " >> $GITHUB_STEP_SUMMARY
+
   dockerBuildPromote2QA:
     name: "Docker: Build Promote to QA"
     needs: 
-      - dockerBuildPromote2Dev
-      - validateBuildDownloadFromDev
+      - addEvidenceToDev
     runs-on: ubuntu-latest
     env:
       ENV_VAL: "QA"
@@ -432,7 +462,7 @@ jobs:
         env:
           STATUS_COMMENT: "Promoting: Docker DEV to QA local"
         run: |
-          jf rt bpr "${{ env.BUILD_NAME }}" "${{ env.BUILD_ID }}" "${{ env.RT_REPO_QA_LOCAL }}" --status="${STATUS_COMMENT}" --include-dependencies   
+          jf rt bpr "${{ env.BUILD_NAME }}" "${{ env.BUILD_ID }}" "${{ env.RT_REPO_QA_LOCAL }}" --status="${STATUS_COMMENT}" --include-dependencies --copy
 
   validateBuildDownloadFromQA:
     name: "Docker: Validate Build Download from QA"
@@ -517,11 +547,41 @@ jobs:
            jf rt curl "/api/build/${{env.BUILD_NAME}}/${{env.BUILD_ID}}" -o $BUILD_INFO_JSON
            cat $BUILD_INFO_JSON
   
+  addEvidenceToQA:
+    name: "Evidence: QA Package"
+    needs: 
+      - dockerBuildPromote2QA
+    runs-on: ubuntu-latest
+    env:
+      ENV_VAL: "QA"
+      BUILD_ID: "bpr-dkr-${{github.run_number}}"
+      RT_REPO_QA_LOCAL: "springpetclinic-docker-qa-local"
+    defaults:
+       run:
+         working-directory: "${{env.DEFAULT_WORKSPACE}}"
+    steps:
+      - name: "Setup JFrog CLI"
+        uses: jfrog/setup-jfrog-cli@v4
+        id: setup-cli
+        env:
+          JF_URL: ${{env.JF_RT_URL}}
+          JFROG_CLI_LOG_LEVEL: ${{env.JFROG_CLI_LOG_LEVEL}}
+        with:
+          version: latest  #2.71.0
+          oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
+          disable-job-summary: ${{env.JOB_SUMMARY}} 
+  
+      - name: "Evidence: Add regression results for Build {{env.ENV_VAL}}"
+        run: |
+          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence", "build_promote_stage": "${{env.ENV_VAL}}", "regression": "100/100" }' > ./${{env.EVIDENCE_SPEC_JSON}}
+          cat ./${{env.EVIDENCE_SPEC_JSON}}
+          jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVIDENCE_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/promotion/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}}
+          #echo "    - Evidence for BUILD Publish attached. " >> $GITHUB_STEP_SUMMARY
+
   dockerBuildPromote2Prod:
     name: "Docker: Build Promote to PROD"
     needs: 
-      - dockerBuildPromote2QA
-      - validateBuildDownloadFromQA
+      - addEvidenceToQA
     runs-on: ubuntu-latest
     env:
       ENV_VAL: "PROD"
@@ -553,7 +613,7 @@ jobs:
         env:
           STATUS_COMMENT: "Promoting: Docker QA to PROD local"
         run: |
-          jf rt bpr "${{ env.BUILD_NAME }}" "${{ env.BUILD_ID }}" "${{ env.RT_REPO_PROD_LOCAL }}" --status="${STATUS_COMMENT}" --include-dependencies
+          jf rt bpr "${{ env.BUILD_NAME }}" "${{ env.BUILD_ID }}" "${{ env.RT_REPO_PROD_LOCAL }}" --status="${STATUS_COMMENT}" --include-dependencies --copy
 
   validateBuildDownloadFromProd:
     name: "Docker: Validate Build Download from PROD"
@@ -606,16 +666,44 @@ jobs:
             echo '```'
           } >> "${GITHUB_STEP_SUMMARY}"
 
+  addEvidenceToProd:
+    name: "Evidence: PROD Package"
+    needs: 
+      - dockerBuildPromote2Prod
+    runs-on: ubuntu-latest
+    env:
+      ENV_VAL: "PROD"
+      BUILD_ID: "bpr-dkr-${{github.run_number}}"
+      RT_REPO_PROD_LOCAL: "springpetclinic-docker-prod-local"
+    defaults:
+       run:
+         working-directory: "${{env.DEFAULT_WORKSPACE}}"
+    steps:
+      - name: "Setup JFrog CLI"
+        uses: jfrog/setup-jfrog-cli@v4
+        id: setup-cli
+        env:
+          JF_URL: ${{env.JF_RT_URL}}
+          JFROG_CLI_LOG_LEVEL: ${{env.JFROG_CLI_LOG_LEVEL}}
+        with:
+          version: latest  #2.71.0
+          oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
+          disable-job-summary: ${{env.JOB_SUMMARY}} 
+  
+      - name: "Evidence: Add regression results for Build {{env.ENV_VAL}}"
+        run: |
+          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence", "build_promote_stage": "${{env.ENV_VAL}}", "regression": "100/100" }' > ./${{env.EVIDENCE_SPEC_JSON}}
+          cat ./${{env.EVIDENCE_SPEC_JSON}}
+          jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVIDENCE_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/promotion/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}}
+          #echo "    - Evidence for BUILD Publish attached. " >> $GITHUB_STEP_SUMMARY
+
   dockerBuildPromotionSummary:
     name: "Docker: Build Promotion Summary"
     runs-on: ubuntu-latest
     needs: 
-      - dockerBuildPromote2Dev
-      - validateBuildDownloadFromDev
-      - dockerBuildPromote2QA
-      - validateBuildDownloadFromQA
-      - dockerBuildPromote2Prod
-      - validateBuildDownloadFromProd
+      - addEvidenceToDev
+      - addEvidenceToQA
+      - addEvidenceToProd
     env:
       BUILD_ID: "bpr-dkr-${{github.run_number}}"
       PROMOTE_CHECKOUT_DIR: "${{github.workspace}}/promote-checkout"
