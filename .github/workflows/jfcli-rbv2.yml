@@ -12,7 +12,7 @@ env:
   BUILD_NAME: "spring-petclinic" # spring-petclinic-3.5.0-SNAPSHOT.jar
   PROJECT_KEY: "ps-apptrust-rlm"
   JOB_SUMMARY: false
-  CLI_LOG_LEVEL: ERROR # DEBUG, INFO, WARN, ERROR
+  CLI_LOG_LEVEL: DEBUG # DEBUG, INFO, WARN, ERROR
   JAVA_DISTRIBUTION: 'temurin'
   JAVA_VERSION: '25'
   EVD_SPEC_JSON: 'evd-spec-info.json'  # ref https://jfrog.com/help/r/jfrog-artifactory-documentation/evidence-setup

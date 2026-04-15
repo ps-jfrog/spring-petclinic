@@ -13,7 +13,7 @@ env:
   BUILD_NAME: "spring-petclinic" # spring-petclinic-3.5.0-SNAPSHOT.jar
   PROJECT_KEY: "ps-build-promote"
   JOB_SUMMARY: false
-  CLI_LOG_LEVEL: ERROR # DEBUG, INFO, WARN, ERROR
+  CLI_LOG_LEVEL: DEBUG # DEBUG, INFO, WARN, ERROR
   JAVA_DISTRIBUTION: 'temurin'
   JAVA_VERSION: '25'
   EVD_SPEC_JSON: 'evd-spec-info.json'  # ref https://jfrog.com/help/r/jfrog-artifactory-documentation/evidence-setup
@@ -229,16 +229,6 @@ jobs:
           #    Centers for Medicare & Medicaid Services: https://security.cms.gov/learn/software-bill-materials-sbom
           # India
           #    CERT-IN: https://www.cert-in.org.in/sbom/
-      - name: "BuildInfo: Collect env"
-        run: jf rt bce ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --project="${{env.PROJECT_KEY}}"
-
-      - name: "BuildInfo: Adds dependencies"
-        continue-on-error: true
-        run: jf rt bad ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --project="${{env.PROJECT_KEY}}"
-
-      - name: "BuildInfo: Add VCS info"
-        run: jf rt bag ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --project="${{env.PROJECT_KEY}}" 
-
       - name: "BuildInfo: Docker build create"
         run: |
           imageDigest=$(cat "${{env.DOCKER_METADATA_JSON}}" | jq '.["containerimage.digest"]')
@@ -251,7 +241,11 @@ jobs:
           jf rt bdc ${{env.RT_REPO_VIRTUAL}} --image-file ${{env.DOCKER_METADATA_JSON}} --build-name=${{env.BUILD_NAME}} --build-number=${{env.BUILD_ID}} --project="${{env.PROJECT_KEY}}"
 
       - name: "BuildInfo: Build Publish"
-        run: jf rt bp ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --detailed-summary=true --project="${{env.PROJECT_KEY}}"
+        run: |
+          jf rt bce ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --project="${{env.PROJECT_KEY}}"
+          jf rt bad ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --project="${{env.PROJECT_KEY}}"
+          jf rt bag ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --project="${{env.PROJECT_KEY}}" 
+          jf rt bp ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --project="${{env.PROJECT_KEY}}" --detailed-summary=true 
 
       # Evidence - Build references
       #     Docs# https://jfrog.com/help/r/jfrog-artifactory-documentation/evidence-management
@@ -442,18 +436,12 @@ jobs:
           jf scan . --format=table --extended-table=true --threads=100 --fail=false --project="${{env.PROJECT_KEY}}"
 
       # Build Info
-      - name: "BuildInfo: Collect env"
-        run: jf rt bce ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --project="${{env.PROJECT_KEY}}"
-
-      - name: "BuildInfo: Add Dependencies"
-        continue-on-error: true
-        run: jf rt bad ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --project="${{env.PROJECT_KEY}}"
-      
-      - name: "BuildInfo: Add VCS info"
-        run: jf rt bag ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --project="${{env.PROJECT_KEY}}"
-
       - name: "BuildInfo: Build Publish"
-        run: jf rt bp ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --detailed-summary=true --project="${{env.PROJECT_KEY}}"
+        run: |
+          jf rt bce ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --project="${{env.PROJECT_KEY}}"
+          jf rt bad ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --project="${{env.PROJECT_KEY}}"
+          jf rt bag ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --project="${{env.PROJECT_KEY}}" 
+          jf rt bp ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --project="${{env.PROJECT_KEY}}" --detailed-summary=true 
       
       - name: "Create artifact digest"
         id: create_artifact_digest
@@ -627,14 +615,12 @@ jobs:
           #    Centers for Medicare & Medicaid Services: https://security.cms.gov/learn/software-bill-materials-sbom
           # India
           #    CERT-IN: https://www.cert-in.org.in/sbom/
-      - name: "BuildInfo: Collect env"
-        run: jf rt bce ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --project="${{env.PROJECT_KEY}}"
- 
-      - name: "BuildInfo: Add VCS info"
-        run: jf rt bag ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --project="${{env.PROJECT_KEY}}"
-
       - name: "BuildInfo: Build Publish"
-        run: jf rt bp ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --detailed-summary=true --project="${{env.PROJECT_KEY}}"
+        run: |
+          jf rt bce ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --project="${{env.PROJECT_KEY}}"
+          jf rt bad ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --project="${{env.PROJECT_KEY}}"
+          jf rt bag ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --project="${{env.PROJECT_KEY}}" 
+          jf rt bp ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --project="${{env.PROJECT_KEY}}" --detailed-summary=true 
 
       - name: "Evidence: GitHub Build Attestation"  
         continue-on-error: true
@@ -648,14 +634,6 @@ jobs:
           show-summary: true
           github-token: ${{secrets.GITHUB_TOKEN}} 
 
-      # - name: "Evidence: Build Info"
-      #   continue-on-error: true 
-      #   env:
-      #       EVD_JSON: "build/build-info.json"
-      #   run: |
-      #     cat ./${{env.EVD_JSON}}
-      #     jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_JSON}} --predicate-type https://jfrog.com/evidence/signature/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}}
-      
       - name: "Evidence: cdx"
         continue-on-error: true 
         env:
