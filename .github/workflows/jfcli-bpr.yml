@@ -320,7 +320,7 @@ jobs:
       RT_REPO_LOCAL_DEV: "bpr-spring-petclinic-mvn-dev-local"
       RT_REPO_LOCAL_QA: "bpr-spring-petclinic-mvn-qa-local"
       RT_REPO_LOCAL_PROD: "bpr-spring-petclinic-mvn-prod-local"
-      # RT_REPO_REMOTE: apache-mvn-remote
+      # RT_REPO_REMOTE: bpr-spring-petclinic-mvn-remote
     defaults:
        run:
          working-directory: "${{env.DEFAULT_WORKSPACE}}"
@@ -536,7 +536,7 @@ jobs:
       RT_REPO_LOCAL_DEV: "bpr-spring-petclinic-gradle-dev-fed"
       RT_REPO_LOCAL_QA: "bpr-spring-petclinic-gradle-qa-fed"
       RT_REPO_LOCAL_PROD: "bpr-spring-petclinic-gradle-prod-fed"
-      # RT_REPO_REMOTE: apache-mvn-remote
+      # RT_REPO_REMOTE: bpr-spring-petclinic-gradle-remote
     defaults:
        run:
          working-directory: "${{env.DEFAULT_WORKSPACE}}"

@@ -346,6 +346,7 @@ jobs:
       RT_REPO_LOCAL_DEV: "rbv2-spring-petclinic-mvn-dev-local"
       RT_REPO_LOCAL_QA: "rbv2-spring-petclinic-mvn-qa-local"
       RT_REPO_LOCAL_PROD: "rbv2-spring-petclinic-mvn-prod-local"
+      # RT_REPO_REMOTE: rbv2-spring-petclinic-mvn-remote
 
     runs-on: ubuntu-latest
     timeout-minutes: 30   # ref  https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#jobsjob_idtimeout-minutes
@@ -587,7 +588,7 @@ jobs:
       RT_REPO_LOCAL_DEV: "rbv2-spring-petclinic-gradle-dev-fed"
       RT_REPO_LOCAL_QA: "rbv2-spring-petclinic-gradle-qa-fed"
       RT_REPO_LOCAL_PROD: "rbv2-spring-petclinic-gradle-prod-fed"
-      # RT_REPO_REMOTE: apache-mvn-remote
+      # RT_REPO_REMOTE: rbv2-spring-petclinic-gradle-remote
     defaults:
        run:
          working-directory: "${{env.DEFAULT_WORKSPACE}}"

@@ -57,9 +57,9 @@ jobs:
 
       - name: "Build promote ${{env.ENV_VAL}}"
         env:
-          STATUS_COMMENT: "Promoting: Docker SNAPSHOT to DEV local"
+          STATUS_COMMENT: "Promoting: Docker package INIT to DEV local"
         run: |
-          jf rt bpr "${{ env.BUILD_NAME }}" "${{ env.BUILD_ID }}" "${{ env.RT_REPO_DEV_LOCAL }}" --project="${{env.PROJECT_KEY}}" --status="${STATUS_COMMENT}" --include-dependencies
+          jf rt bpr "${{ env.BUILD_NAME }}" "${{ env.BUILD_ID }}" "${{ env.RT_REPO_DEV_LOCAL }}" --project="${{env.PROJECT_KEY}}" --status="${{env.STATUS_COMMENT}}" --include-dependencies
 
       - name: "Evidence: Add regression results for Build ${{env.ENV_VAL}}"
         run: |
@@ -99,9 +99,9 @@ jobs:
 
       - name: "Build promote ${{env.ENV_VAL}}"
         env:
-          STATUS_COMMENT: "Promoting: Docker SNAPSHOT to DEV local"
+          STATUS_COMMENT: "Promoting: MVN package INIT to DEV local"
         run: |
-          jf rt bpr "${{ env.BUILD_NAME }}" "${{ env.BUILD_ID }}" "${{ env.RT_REPO_DEV_LOCAL }}" --project="${{env.PROJECT_KEY}}" --status="${STATUS_COMMENT}" --include-dependencies
+          jf rt bpr "${{ env.BUILD_NAME }}" "${{ env.BUILD_ID }}" "${{ env.RT_REPO_DEV_LOCAL }}" --project="${{env.PROJECT_KEY}}" --status="${{env.STATUS_COMMENT}}" --include-dependencies
 
       - name: "Evidence: Add regression results for Build ${{env.ENV_VAL}}"
         continue-on-error: true
@@ -142,9 +142,9 @@ jobs:
 
       - name: "Build promote ${{env.ENV_VAL}}"
         env:
-          STATUS_COMMENT: "Promoting: Docker SNAPSHOT to DEV local"
+          STATUS_COMMENT: "Promoting: Gradle package INIT to DEV local"
         run: |
-          jf rt bpr "${{ env.BUILD_NAME }}" "${{ env.BUILD_ID }}" "${{ env.RT_REPO_DEV_LOCAL }}" --project="${{env.PROJECT_KEY}}" --status="${STATUS_COMMENT}" --include-dependencies
+          jf rt bpr "${{ env.BUILD_NAME }}" "${{ env.BUILD_ID }}" "${{ env.RT_REPO_DEV_LOCAL }}" --project="${{env.PROJECT_KEY}}" --status="${{env.STATUS_COMMENT}}" --include-dependencies
 
       - name: "Evidence: Add regression results for Build ${{env.ENV_VAL}}"
         continue-on-error: true
