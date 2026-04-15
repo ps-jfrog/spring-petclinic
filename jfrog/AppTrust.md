@@ -1,8 +1,14 @@
 # RLM: Release Bundle v2 (RBv2)
+ - [![JFCLI: BPR Package](https://github.com/ps-jfrog/spring-petclinic/actions/workflows/jfcli-bpr.yml/badge.svg)](https://github.com/ps-jfrog/spring-petclinic/actions/workflows/jfcli-bpr.yml)
+
 
 
 ![GitHub Actions workflow](./images/github-actions.png)
 ![GitHub Security](./images/github-security-codescan.png)
+
+
+# Project & Repos
+![Project](./images/at-project.png)
 
 ## Build
 

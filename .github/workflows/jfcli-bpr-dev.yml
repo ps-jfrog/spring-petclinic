@@ -1,0 +1,156 @@
+name: "BPR: Promote to DEV"
+on: 
+  workflow_run:
+    workflows: 
+      - "BPR: Package"
+    types: [completed]
+permissions:
+  pull-requests: write
+  contents: write
+  actions: read # for detecting the Github Actions environment.
+  id-token: write # for creating OIDC tokens for signing.
+  packages: write # for uploading attestations.
+  security-events: write # Required for uploading code scanning.
+  attestations: write
+  artifact-metadata: write
+env:
+  JF_RT_URL: "https://${{vars.JF_NAME}}.jfrog.io"
+  BUILD_NAME: "spring-petclinic" # spring-petclinic-3.5.0-SNAPSHOT.jar
+  PROJECT_KEY: "ps-build-promote"
+  JOB_SUMMARY: false
+  CLI_LOG_LEVEL: ERROR # DEBUG, INFO, WARN, ERROR
+  JAVA_DISTRIBUTION: 'temurin'
+  JAVA_VERSION: '25'
+  EVD_SPEC_JSON: 'evd-spec-info.json'  # ref https://jfrog.com/help/r/jfrog-artifactory-documentation/evidence-setup
+  #RBV2_SIGNING_KEY: "${{secrets.RBV2_SIGNING_KEY}}" # ref https://jfrog.com/help/r/jfrog-artifactory-documentation/create-signing-keys-for-release-bundles-v2
+  DEFAULT_WORKSPACE: "${{github.workspace}}"  # /home/runner/work/spring-petclinic/spring-petclinic
+
+jobs:
+  dockerBuildPromote2Dev:
+    name: "Docker: Promote to DEV local repo"
+    runs-on: ubuntu-latest
+    env:
+      ENV_VAL: "DEV"
+      BUILD_ID: "bpr-dkr-${{github.event.workflow_run.run_number}}"
+      RT_REPO_DEV_LOCAL: "bpr-spring-petclinic-docker-dev-local"
+    defaults:
+       run:
+         working-directory: "${{env.DEFAULT_WORKSPACE}}"
+    steps:
+      - name: "Setup JFrog CLI"
+        uses: jfrog/setup-jfrog-cli@v5
+        id: setup-cli
+        env:
+          JF_URL: ${{env.JF_RT_URL}}
+          JF_PROJECT: "${{env.PROJECT_KEY}}"
+          JFROG_CLI_LOG_LEVEL: "${{env.CLI_LOG_LEVEL}}"
+        with:
+          version: latest  #2.71.0
+          oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
+          disable-job-summary: ${{env.JOB_SUMMARY}}
+
+      - name: "Xray - Build scan"
+        timeout-minutes: 15   
+        continue-on-error: true  
+        run: |
+          jf bs ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --fail=false --format=table --extended-table=true --vuln=true --project="${{env.PROJECT_KEY}}"
+
+      - name: "Build promote ${{env.ENV_VAL}}"
+        env:
+          STATUS_COMMENT: "Promoting: Docker SNAPSHOT to DEV local"
+        run: |
+          jf rt bpr "${{ env.BUILD_NAME }}" "${{ env.BUILD_ID }}" "${{ env.RT_REPO_DEV_LOCAL }}" --project="${{env.PROJECT_KEY}}" --status="${STATUS_COMMENT}" --include-dependencies
+
+      - name: "Evidence: Add regression results for Build ${{env.ENV_VAL}}"
+        run: |
+          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence", "build_promote_stage": "${{env.ENV_VAL}}", "dev-docker-test": "100/100" }' > ./${{env.EVD_SPEC_JSON}}
+          cat ./${{env.EVD_SPEC_JSON}}
+          jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/signature/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
+
+
+  mvnBuildPromote2Dev:
+    name: "MVN: Promote to DEV local repo"
+    runs-on: ubuntu-latest
+    env:
+      ENV_VAL: "DEV"
+      BUILD_ID: "bpr-mvn-${{github.event.workflow_run.run_number}}"
+      RT_REPO_DEV_LOCAL: "bpr-spring-petclinic-mvn-dev-local"
+    defaults:
+       run:
+         working-directory: "${{env.DEFAULT_WORKSPACE}}"
+    steps:
+      - name: "Setup JFrog CLI"
+        uses: jfrog/setup-jfrog-cli@v5
+        id: setup-cli
+        env:
+          JF_URL: ${{env.JF_RT_URL}}
+          JF_PROJECT: "${{env.PROJECT_KEY}}"
+          JFROG_CLI_LOG_LEVEL: "${{env.CLI_LOG_LEVEL}}"
+        with:
+          version: latest  #2.71.0
+          oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
+          disable-job-summary: ${{env.JOB_SUMMARY}}
+
+      - name: "Xray - Build scan"
+        timeout-minutes: 15   
+        continue-on-error: true  
+        run: |
+          jf bs ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --fail=false --format=table --extended-table=true --vuln=true --project="${{env.PROJECT_KEY}}"
+
+      - name: "Build promote ${{env.ENV_VAL}}"
+        env:
+          STATUS_COMMENT: "Promoting: Docker SNAPSHOT to DEV local"
+        run: |
+          jf rt bpr "${{ env.BUILD_NAME }}" "${{ env.BUILD_ID }}" "${{ env.RT_REPO_DEV_LOCAL }}" --project="${{env.PROJECT_KEY}}" --status="${STATUS_COMMENT}" --include-dependencies
+
+      - name: "Evidence: Add regression results for Build ${{env.ENV_VAL}}"
+        continue-on-error: true
+        run: |
+          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence", "build_promote_stage": "${{env.ENV_VAL}}", "dev-test": "100/100" }' > ./${{env.EVD_SPEC_JSON}}
+          cat ./${{env.EVD_SPEC_JSON}}
+          jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/signature/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
+
+
+  gradleBuildPromote2Dev:
+    name: "Gradle: Promote to DEV local repo"
+    runs-on: ubuntu-latest
+    env:
+      ENV_VAL: "DEV"
+      BUILD_ID: "bpr-gdl-${{github.event.workflow_run.run_number}}"
+      RT_REPO_DEV_LOCAL: "bpr-spring-petclinic-gradle-dev-fed"
+    defaults:
+       run:
+         working-directory: "${{env.DEFAULT_WORKSPACE}}"
+    steps:
+      - name: "Setup JFrog CLI"
+        uses: jfrog/setup-jfrog-cli@v5
+        id: setup-cli
+        env:
+          JF_URL: ${{env.JF_RT_URL}}
+          JF_PROJECT: "${{env.PROJECT_KEY}}"
+          JFROG_CLI_LOG_LEVEL: "${{env.CLI_LOG_LEVEL}}"
+        with:
+          version: latest  #2.71.0
+          oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
+          disable-job-summary: ${{env.JOB_SUMMARY}}
+
+      - name: "Xray - Build scan"
+        timeout-minutes: 15   
+        continue-on-error: true  
+        run: |
+          jf bs ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --fail=false --format=table --extended-table=true --vuln=true --project="${{env.PROJECT_KEY}}"
+
+      - name: "Build promote ${{env.ENV_VAL}}"
+        env:
+          STATUS_COMMENT: "Promoting: Docker SNAPSHOT to DEV local"
+        run: |
+          jf rt bpr "${{ env.BUILD_NAME }}" "${{ env.BUILD_ID }}" "${{ env.RT_REPO_DEV_LOCAL }}" --project="${{env.PROJECT_KEY}}" --status="${STATUS_COMMENT}" --include-dependencies
+
+      - name: "Evidence: Add regression results for Build ${{env.ENV_VAL}}"
+        continue-on-error: true
+        run: |
+          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence", "build_promote_stage": "${{env.ENV_VAL}}", "dev-test": "100/100" }' > ./${{env.EVD_SPEC_JSON}}
+          cat ./${{env.EVD_SPEC_JSON}}
+          jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/signature/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
+
+      
