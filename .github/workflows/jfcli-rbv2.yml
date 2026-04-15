@@ -91,6 +91,8 @@ jobs:
           docker -v
           # jf config
           jf config show
+          rm -rf build.gradle 
+          rm -rf **/*.gradle 
 
       - name: "Config jf with mvn repos"
         run: |
@@ -151,14 +153,12 @@ jobs:
         timeout-minutes: 15    # ref https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#jobsjob_idstepstimeout-minutes
         continue-on-error: true    # ref: https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#jobsjob_idstepscontinue-on-error
         run: |
-          rm -rf build.gradle 
           jf ca --format=table --threads=100 --image=psazuse.jfrog.io/springpetclinic-docker-virtual/amazoncorretto:25-alpine-jdk
 
-      - name: "Curation-Audit: MNV" 
+      - name: "Curation-Audit: MVN" 
         timeout-minutes: 15   
         continue-on-error: true   
         run: |
-          rm -rf build.gradle 
           jf ca --format=table --threads=100 
 
       - name: "Xray & JAS: Audit"  # https://docs.jfrog-applications.jfrog.io/jfrog-applications/jfrog-cli/cli-for-jfrog-security
@@ -188,7 +188,7 @@ jobs:
           TAG13: "${{vars.JF_NAME}}.jfrog.io/${{env.RT_REPO_VIRTUAL}}/${{env.ARTIFACT_NAME}}:${{env.BUILD_ID}}"
           TAG14: "${{vars.JF_NAME}}.jfrog.io/${{env.RT_REPO_VIRTUAL}}/${{env.ARTIFACT_NAME}}:latest"
         run: |
-          docker image build -f ./jfrog/Dockerfile --build-arg JAR_FILE=${{env.JAR_FILE}}  --platform "${{env.DOCKER_BUILDX_PLATFORMS}}" --metadata-file "${{env.DOCKER_METADATA_JSON}}" --push . -t ${{env.TAG10}} -t ${{env.TAG11}} -t ${{env.TAG12}}  -t ${{env.TAG13}} -t ${{env.TAG14}}
+          docker buildx build -f ./jfrog/Dockerfile --build-arg JAR_FILE=${{env.JAR_FILE}} --platform "${{env.DOCKER_BUILDX_PLATFORMS}}" --metadata-file "${{env.DOCKER_METADATA_JSON}}" --push -t ${{env.TAG10}} -t ${{env.TAG11}} -t ${{env.TAG12}} -t ${{env.TAG13}} -t ${{env.TAG14}} .
 
       - name: "Optional: Docker pull image"
         run: |
@@ -402,6 +402,8 @@ jobs:
           docker -v
           # jf config
           jf config show
+          rm -rf build.gradle 
+          rm -rf **/*.gradle 
 
       - name: "Config jf with mvn repos"
         run: |
@@ -560,7 +562,7 @@ jobs:
           echo "{ \"files\": [ {\"build\": \"${{env.BUILD_NAME}}/${{env.BUILD_ID}}\", \"includeDeps\":\"false\"} ] }"  > ${{env.RBv2_SPEC_JSON}}
           cat ${{env.RBv2_SPEC_JSON}}
 
-          jf rbc --build-name="${{env.BUILD_NAME}}" --build-number="${{env.BUILD_ID}}" --project="${{env.PROJECT_KEY}}" --signing-key=${{secrets.RBV2_SIGNING_KEY}} --spec=${{env.RBv2_SPEC_JSON}} --sync=true
+          jf rbc ${{env.BUILD_NAME}} ${{env.BUILD_ID}}" --project="${{env.PROJECT_KEY}}" --signing-key=${{secrets.RBV2_SIGNING_KEY}} --spec=${{env.RBv2_SPEC_JSON}} --sync=true
 
       - name: "RLM: Xray Indexing"
         run: |
@@ -630,7 +632,8 @@ jobs:
           # Gradle
           gradle -v
           # jf config
-          jf config show
+          jf config show 
+          rm -rf pom.xml 
 
       - name: "Config jf with gradle repos"
         # jf gradlec --repo-deploy springpetclinic-gradle-virtual --repo-resolve springpetclinic-gradle-virtual --repo-deploy springpetclinic-gradle-virtual
