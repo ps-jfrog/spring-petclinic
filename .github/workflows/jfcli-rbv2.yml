@@ -114,10 +114,15 @@ jobs:
           username: ${{steps.setup-cli.outputs.oidc-user}}
           password: ${{steps.setup-cli.outputs.oidc-token}}
 
+      - name: "Docker: QEMU (cross-arch)"
+        uses: docker/setup-qemu-action@v4
+
       - name: "Docker buildx instance"
         uses: docker/setup-buildx-action@v4   # ref: https://github.com/marketplace/actions/docker-setup-buildx h
         with:
           use: true
+          # Multi-platform images require the docker-container driver (or containerd image store); the default docker driver cannot push multi-arch manifests.
+          driver: docker-container
           platforms: ${{env.DOCKER_BUILDX_PLATFORMS}} # linux/amd64,linux/arm64 # ref: https://docs.docker.com/reference/cli/docker/buildx/create/#platform
 
       - name: "Docker: Summary "
@@ -555,7 +560,7 @@ jobs:
           echo "{ \"files\": [ {\"build\": \"${{env.BUILD_NAME}}/${{env.BUILD_ID}}\", \"includeDeps\":\"false\"} ] }"  > ${{env.RBv2_SPEC_JSON}}
           cat ${{env.RBv2_SPEC_JSON}}
 
-          jf rbc ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --sync=true --signing-key=${{secrets.RBV2_SIGNING_KEY}} --spec=${{env.RBv2_SPEC_JSON}} --project="${{env.PROJECT_KEY}}"
+          jf rbc --build-name="${{env.BUILD_NAME}}" --build-number="${{env.BUILD_ID}}" --project="${{env.PROJECT_KEY}}" --signing-key=${{secrets.RBV2_SIGNING_KEY}} --spec=${{env.RBv2_SPEC_JSON}} --sync=true
 
       - name: "RLM: Xray Indexing"
         run: |
