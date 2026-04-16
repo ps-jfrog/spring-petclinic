@@ -656,8 +656,8 @@ jobs:
       - mvnPackage
       - gradlePackage
     env:
-      METADATA_NAME: "bpr-metadata"
-      METADATA_FILE: "bpr_run_number.txt"
+      METADATA_NAME: "bpr-metadata-${{github.run_number}}"
+      METADATA_FILE: "bpr_run_number-${{github.run_number}}.txt"
     steps:
       - name: "Write pipeline metadata info"
         run: |
