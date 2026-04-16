@@ -27,11 +27,45 @@ env:
   DEFAULT_WORKSPACE: "${{github.workspace}}"  # /home/runner/work/spring-petclinic/spring-petclinic
 
 jobs:
-  dockerBuildPromote2QA:
-    name: "Docker: Promote to QA local repo"
+  extract-metadata:
     runs-on: ubuntu-latest
     env:
-      BUILD_ID: "bpr-dkr-${{github.event.workflow_run.run_number}}"
+      METADATA_NAME: "bpr-metadata"
+      METADATA_FILE: "bpr_run_number.txt"
+    outputs:
+      bpr_run_number: ${{ steps.read.outputs.bpr_run_number }}
+      commit_sha: ${{ steps.read.outputs.commit_sha }}
+      branch: ${{ steps.read.outputs.branch }}
+    steps:
+      - name: Download metadata from dev
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ env.METADATA_NAME }}
+          path: .
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: "Parse metadata file"
+        id: read
+        run: |
+          while IFS='=' read -r key value; do
+            echo "$key=$value" >> $GITHUB_OUTPUT
+          done < ${{env.METADATA_FILE}}
+
+      - name: "show info"
+        run: |
+          echo "Extracted BPR Run Number = ${{ steps.read.outputs.bpr_run_number }}"
+          echo "Commit SHA      = ${{ steps.read.outputs.commit_sha }}"
+          echo "Branch         = ${{ steps.read.outputs.branch }}"
+
+
+  dockerBuildPromote2QA:
+    name: "Docker: Promote to QA local repo"
+    needs: extract-metadata
+    runs-on: ubuntu-latest
+    env:
+      # BUILD_ID: "bpr-dkr-${{github.event.workflow_run.run_number}}"
+      BUILD_ID: "bpr-dkr-${{ needs.extract-metadata.outputs.bpr_run_number }}"
       RT_REPO_QA_LOCAL: "bpr-spring-petclinic-docker-qa-local"
     defaults:
        run:
@@ -70,9 +104,11 @@ jobs:
 
   mvnBuildPromote2QA:
     name: "MVN: Promote to QA local repo"
+    needs: extract-metadata
     runs-on: ubuntu-latest
     env:
-      BUILD_ID: "bpr-mvn-${{github.event.workflow_run.run_number}}"
+      # BUILD_ID: "bpr-mvn-${{github.event.workflow_run.run_number}}"
+      BUILD_ID: "bpr-mvn-${{ needs.extract-metadata.outputs.bpr_run_number }}"
       RT_REPO_QA_LOCAL: "bpr-spring-petclinic-mvn-qa-local"
     defaults:
        run:
@@ -112,9 +148,11 @@ jobs:
 
   gradleBuildPromote2QA:
     name: "Gradle: Promote to QA local repo"
+    needs: extract-metadata
     runs-on: ubuntu-latest
     env:
-      BUILD_ID: "bpr-gdl-${{github.event.workflow_run.run_number}}"
+      # BUILD_ID: "bpr-gdl-${{github.event.workflow_run.run_number}}"
+      BUILD_ID: "bpr-gdl-${{ needs.extract-metadata.outputs.bpr_run_number }}"
       RT_REPO_QA_LOCAL: "bpr-spring-petclinic-gradle-qa-fed"
     defaults:
        run:

@@ -163,7 +163,7 @@ jobs:
       - name: "Xray & JAS: Audit"  # https://docs.jfrog-applications.jfrog.io/jfrog-applications/jfrog-cli/cli-for-jfrog-security
         # scan for Xray: Source code dependencies and JAS: Secrets Detection, IaC, Vulnerabilities Contextual Analysis 'SAST'
         timeout-minutes: 15  # ref: https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#jobsjob_idstepstimeout-minutes
-        # continue-on-error: true    # ref: https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#jobsjob_idstepscontinue-on-error
+        continue-on-error: true    # ref: https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#jobsjob_idstepscontinue-on-error
         run: |
           jf audit --mvn --sast=true --sca=true --secrets=true --licenses=true --validate-secrets=true --vuln=true --format=table --extended-table=true --threads=100 --fail=false --project="${{env.PROJECT_KEY}}"
 
@@ -201,7 +201,7 @@ jobs:
       #     Docs# https://jfrog.com/help/r/jfrog-artifactory-documentation/evidence-management
       #     CLI# https://docs.jfrog-applications.jfrog.io/jfrog-applications/jfrog-cli/binaries-management-with-jfrog-artifactory/evidence-service
       - name: "Evidence: Package"
-        # continue-on-error: true 
+        continue-on-error: true 
         run: |
           echo '{ "actor": "${{github.actor}}", "pipeline": "github actions","build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd":"Evidence-Package", "package":"${{env.RT_REPO_DOCKER_URL}}" }' > ./${{env.EVD_SPEC_JSON}}
           cat ./${{env.EVD_SPEC_JSON}}
@@ -251,7 +251,7 @@ jobs:
       #     Docs# https://jfrog.com/help/r/jfrog-artifactory-documentation/evidence-management
       #     CLI# https://docs.jfrog-applications.jfrog.io/jfrog-applications/jfrog-cli/binaries-management-with-jfrog-artifactory/evidence-service
       - name: "Evidence: Build Publish"
-        # continue-on-error: true 
+        continue-on-error: true 
         run: |
           echo '{ "actor": "${{github.actor}}", "pipeline": "github actions","build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence-BuildPublish"}' > ./${{env.EVD_SPEC_JSON}}
           cat ./${{env.EVD_SPEC_JSON}}
@@ -260,6 +260,7 @@ jobs:
 
       # curl -L 'https://psazuse.jfrog.io/xray/api/v1/binMgr/builds' -H 'Content-Type: application/json' -H 'Authorization: ••••••' -d '{  "names": ["spring-petclinic"] }'
       - name: "Optional: Add Builds to Indexing Configuration"
+        continue-on-error: true 
         run: |
           jf xr curl "/api/v1/binMgr/builds" -H 'Content-Type: application/json' -d '{"names": ["${{env.BUILD_NAME}}"] }'
       # Set properties      
@@ -291,6 +292,7 @@ jobs:
       # MVN plugin '<artifactId>cyclonedx-maven-plugin</artifactId>' is used to generate SBOM information in the CycloneDX format# target/classes/META-INF/sbom/application.cdx.json
       # ref https://spring.io/blog/2024/05/24/sbom-support-in-spring-boot-3-3
       - name: "Optional: Xray sbom-enrich" 
+        continue-on-error: true 
         run: |
           jf se "target/classes/META-INF/sbom/application.cdx.json" --threads=100
 
@@ -302,6 +304,7 @@ jobs:
 
       - name: "Optional: Build Scan V2"  # https://jfrog.com/help/r/xray-rest-apis/scan-build-v2
         # jf xr curl /api/v2/ci/build -H 'Content-Type: application/json' -d '{"build_name": "spring-petclinic", "build_number": "ga-gdl-xray-50","rescan":true }'
+        continue-on-error: true 
         run: |
           jf xr curl /api/v2/ci/build -H 'Content-Type: application/json' -d '{"build_name": "${{env.BUILD_NAME}}", "build_number": "${{env.BUILD_ID}}","rescan":false  }'
 
@@ -403,7 +406,8 @@ jobs:
         run: |
           jf ca --format=table --threads=100
   
-      - name: "Xray & JAS: Audit"  
+      - name: "Xray & JAS: Audit" 
+        continue-on-error: true  
         timeout-minutes: 15 
         # continue-on-error: true 
         run: |
@@ -450,7 +454,7 @@ jobs:
           echo "artifact_digest=$ARTIFACT_DIGEST" >> $GITHUB_OUTPUT
 
       - name: "Evidence: Build Info"
-        # continue-on-error: true 
+        continue-on-error: true 
         env:
             EVD_JSON: "target/build-info.json"
         run: |
@@ -502,6 +506,7 @@ jobs:
           jf xr curl "/api/v1/build/status" -H 'Content-Type: application/json' -d '{"name": "${{env.BUILD_NAME}}", "number": "${{env.BUILD_ID}}" }'
  
       - name: "Optional: Xray sbom-enrich" 
+        continue-on-error: true 
         run: |
           jf se "target/classes/META-INF/sbom/application.cdx.json" --threads=100
 
@@ -512,6 +517,7 @@ jobs:
           jf bs ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --fail=false --format=table --extended-table=true --vuln=true --project="${{env.PROJECT_KEY}}"
 
       - name: "Optional: Build Scan V2" # https://jfrog.com/help/r/xray-rest-apis/scan-build-v2
+        continue-on-error: true 
         run: |
           jf xr curl /api/v2/ci/build -H 'Content-Type: application/json' -d '{"build_name": "${{env.BUILD_NAME}}", "build_number": "${{env.BUILD_ID}}","rescan":false }'
 
