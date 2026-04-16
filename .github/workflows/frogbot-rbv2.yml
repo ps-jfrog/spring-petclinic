@@ -1,4 +1,4 @@
-name: "Frogbot: Scan and Fix"
+name: "AppTrust: Frogbot - Scan and Fix"
 # refer https://docs.jfrog-applications.jfrog.io/jfrog-applications/frogbot/setup-frogbot/setup-frogbot-using-github-actions
 on: push
 permissions:
@@ -108,7 +108,7 @@ jobs:
           JF_WATCHES: "frogbot-spring-petclinic"  # email DL recipients defined in the watch
           # [Optional]
           # JFrog project. Learn more about it here: https://www.jfrog.com/confluence/display/JFROG/Projects
-          # JF_PROJECT: <project-key>
+          JF_PROJECT: "ps-apptrust-rlm"
 
           # [Optional, default: "FALSE"]
           # Displays all existing vulnerabilities, including the ones that were added by the pull request.
