@@ -163,12 +163,27 @@ jobs:
       METADATA_NAME: "bpr-metadata"
       METADATA_FILE: "bpr_run_number.txt"
     steps:
+      - name: "Download metadata from BPR Package run"
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ env.METADATA_NAME }}
+          path: .
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+
       - name: "Read metadata"
         id: read
         run: |
+          f="${{ env.METADATA_FILE }}"
+          if [[ ! -f "$f" ]]; then
+            found="$(find . -name "${{ env.METADATA_FILE }}" -type f ! -path './.git/*' | head -1)"
+            [[ -n "$found" ]] || { echo "::error::${{ env.METADATA_FILE }} missing after artifact download"; exit 1; }
+            cp -f "$found" "$f"
+          fi
           while IFS='=' read -r key value; do
-            echo "$key=$value" >> $GITHUB_OUTPUT
-          done < ${{env.METADATA_FILE}}
+            [[ -z "$key" || "$key" =~ ^# ]] && continue
+            echo "$key=$value" >> "$GITHUB_OUTPUT"
+          done < "$f"
 
       - name: "Use metadata"
         run: |

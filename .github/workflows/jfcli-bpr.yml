@@ -660,10 +660,8 @@ jobs:
             echo "workflow_run_id=${{ github.run_id }}"
             echo "commit_sha=${{ github.sha }}"
             echo "branch=${{ github.ref_name }}"
-            echo "Docker Package=${{ steps.dockerPackage.outputs.PACKAGE_ID }}"
-            echo "Maven Package=${{ steps.mvnPackage.outputs.PACKAGE_ID }}"
-            echo "Gradle Package=${{ steps.gradlePackage.outputs.PACKAGE_ID }}"
             echo "project_key=${{ env.PROJECT_KEY }}"
+            echo "build_name=${{ env.BUILD_NAME }}"
             echo "build_time=$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
           } > ${{env.METADATA_FILE}}
 
