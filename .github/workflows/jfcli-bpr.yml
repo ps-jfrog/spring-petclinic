@@ -642,3 +642,40 @@ jobs:
           cat ./${{env.EVD_JSON}}
           jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_JSON}} --predicate-type https://cyclonedx.org/bom/v1.4 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
 
+  metadata_info:
+    name: "Metadata Job Info"
+    runs-on: ubuntu-latest
+    needs: 
+      - dockerPackage
+      - mvnPackage
+      - gradlePackage
+    env:
+      ETADATA_NAME: "bpr-metadata
+      METADATA_FILE: "bpr_run_number.txt"
+    steps:
+      - name: "Write pipeline metadata info"
+        run: |
+          {
+            echo "bpr_run_number=${{ github.run_number }}"
+            echo "workflow_run_id=${{ github.run_id }}"
+            echo "commit_sha=${{ github.sha }}"
+            echo "branch=${{ github.ref_name }}"
+            echo "Docker Package=${{ jobs.dockerPackage.outputs.PACKAGE_ID }}"
+            echo "Maven Package=${{ jobs.mvnPackage.outputs.PACKAGE_ID }}"
+            echo "Gradle Package=${{ jobs.gradlePackage.outputs.PACKAGE_ID }}"
+            echo "project_key=${{ env.PROJECT_KEY }}"
+            echo "build_time=$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          } > ${{env.METADATA_FILE}}
+
+      - name: "Show file"
+        run: |
+          cat ${{env.METADATA_FILE}}
+
+      - name: "Upload run number artifact"
+        uses: actions/upload-artifact@v7  # https://github.com/actions/upload-artifact
+        with:
+          name: ${{env.METADATA_NAME}}
+          path: ${{env.METADATA_FILE}}
+          retention-days: 7
+
+ 

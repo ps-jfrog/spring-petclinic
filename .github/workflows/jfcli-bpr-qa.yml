@@ -1,8 +1,8 @@
-name: "BPR: Promote to DEV"
+name: "BPR: Promote to QA"
 on: 
   workflow_run:
     workflows: 
-      - "BPR: Package"
+      - "BPR: Promote to DEV"
     types: [completed]
 permissions:
   pull-requests: write
@@ -17,22 +17,22 @@ env:
   JF_RT_URL: "https://${{vars.JF_NAME}}.jfrog.io"
   BUILD_NAME: "spring-petclinic" # spring-petclinic-3.5.0-SNAPSHOT.jar
   PROJECT_KEY: "ps-build-promote"
-  ENV_VAL: "DEV"
+  ENV_VAL: "QA"
   JOB_SUMMARY: false
   CLI_LOG_LEVEL: DEBUG # DEBUG, INFO, WARN, ERROR
   JAVA_DISTRIBUTION: 'temurin'
   JAVA_VERSION: '25'
   EVD_SPEC_JSON: 'evd-spec-info.json'  # ref https://jfrog.com/help/r/jfrog-artifactory-documentation/evidence-setup
-  #RBV2_SIGNING_KEY: "${{secrets.RBV2_SIGNING_KEY}}" # ref https://jfrog.com/help/r/jfrog-artifactory-documentation/create-signing-keys-for-release-bundles-v2
+  #RBV2_SIGNING_KEY: "${{secrets.RBV2_SIGNING_KEY}}" 
   DEFAULT_WORKSPACE: "${{github.workspace}}"  # /home/runner/work/spring-petclinic/spring-petclinic
 
 jobs:
-  dockerBuildPromote2Dev:
-    name: "Docker: Promote to DEV local repo"
+  dockerBuildPromote2QA:
+    name: "Docker: Promote to QA local repo"
     runs-on: ubuntu-latest
     env:
       BUILD_ID: "bpr-dkr-${{github.event.workflow_run.run_number}}"
-      RT_REPO_DEV_LOCAL: "bpr-spring-petclinic-docker-dev-local"
+      RT_REPO_QA_LOCAL: "bpr-spring-petclinic-docker-qa-local"
     defaults:
        run:
          working-directory: "${{env.DEFAULT_WORKSPACE}}"
@@ -57,23 +57,23 @@ jobs:
 
       - name: "Build promote ${{env.ENV_VAL}}"
         env:
-          STATUS_COMMENT: "Promoting: Docker package INIT to DEV local"
+          STATUS_COMMENT: "Promoting: Docker package DEV to QA local"
         run: |
-          jf rt bpr "${{ env.BUILD_NAME }}" "${{ env.BUILD_ID }}" "${{ env.RT_REPO_DEV_LOCAL }}" --project="${{env.PROJECT_KEY}}" --status="${{env.STATUS_COMMENT}}" --include-dependencies
+          jf rt bpr "${{ env.BUILD_NAME }}" "${{ env.BUILD_ID }}" "${{ env.RT_REPO_QA_LOCAL }}" --project="${{env.PROJECT_KEY}}" --status="${{env.STATUS_COMMENT}}" --include-dependencies
 
       - name: "Evidence: Add regression results for Build ${{env.ENV_VAL}}"
         run: |
-          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence", "build_promote_stage": "${{env.ENV_VAL}}", "dev-docker-test": "100/100" }' > ./${{env.EVD_SPEC_JSON}}
+          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence", "build_promote_stage": "${{env.ENV_VAL}}", "qa-docker-test": "100/100" }' > ./${{env.EVD_SPEC_JSON}}
           cat ./${{env.EVD_SPEC_JSON}}
           jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/signature/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
 
 
-  mvnBuildPromote2Dev:
-    name: "MVN: Promote to DEV local repo"
+  mvnBuildPromote2QA:
+    name: "MVN: Promote to QA local repo"
     runs-on: ubuntu-latest
     env:
       BUILD_ID: "bpr-mvn-${{github.event.workflow_run.run_number}}"
-      RT_REPO_DEV_LOCAL: "bpr-spring-petclinic-mvn-dev-local"
+      RT_REPO_QA_LOCAL: "bpr-spring-petclinic-mvn-qa-local"
     defaults:
        run:
          working-directory: "${{env.DEFAULT_WORKSPACE}}"
@@ -98,24 +98,24 @@ jobs:
 
       - name: "Build promote ${{env.ENV_VAL}}"
         env:
-          STATUS_COMMENT: "Promoting: MVN package INIT to DEV local"
+          STATUS_COMMENT: "Promoting: MVN package DEV to QA local"
         run: |
-          jf rt bpr "${{ env.BUILD_NAME }}" "${{ env.BUILD_ID }}" "${{ env.RT_REPO_DEV_LOCAL }}" --project="${{env.PROJECT_KEY}}" --status="${{env.STATUS_COMMENT}}" 
+          jf rt bpr "${{ env.BUILD_NAME }}" "${{ env.BUILD_ID }}" "${{ env.RT_REPO_QA_LOCAL }}" --project="${{env.PROJECT_KEY}}" --status="${{env.STATUS_COMMENT}}" 
 
       - name: "Evidence: Add regression results for Build ${{env.ENV_VAL}}"
         continue-on-error: true
         run: |
-          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence", "build_promote_stage": "${{env.ENV_VAL}}", "dev-test": "100/100" }' > ./${{env.EVD_SPEC_JSON}}
+          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence", "build_promote_stage": "${{env.ENV_VAL}}", "qa-test": "100/100" }' > ./${{env.EVD_SPEC_JSON}}
           cat ./${{env.EVD_SPEC_JSON}}
           jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/signature/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
 
 
-  gradleBuildPromote2Dev:
-    name: "Gradle: Promote to DEV local repo"
+  gradleBuildPromote2QA:
+    name: "Gradle: Promote to QA local repo"
     runs-on: ubuntu-latest
     env:
       BUILD_ID: "bpr-gdl-${{github.event.workflow_run.run_number}}"
-      RT_REPO_DEV_LOCAL: "bpr-spring-petclinic-gradle-dev-fed"
+      RT_REPO_QA_LOCAL: "bpr-spring-petclinic-gradle-qa-fed"
     defaults:
        run:
          working-directory: "${{env.DEFAULT_WORKSPACE}}"
@@ -140,59 +140,15 @@ jobs:
 
       - name: "Build promote ${{env.ENV_VAL}}"
         env:
-          STATUS_COMMENT: "Promoting: Gradle package INIT to DEV local"
+          STATUS_COMMENT: "Promoting: Gradle package DEV to QA local"
         run: |
-          jf rt bpr "${{ env.BUILD_NAME }}" "${{ env.BUILD_ID }}" "${{ env.RT_REPO_DEV_LOCAL }}" --project="${{env.PROJECT_KEY}}" --status="${{env.STATUS_COMMENT}}" 
+          jf rt bpr "${{ env.BUILD_NAME }}" "${{ env.BUILD_ID }}" "${{ env.RT_REPO_QA_LOCAL }}" --project="${{env.PROJECT_KEY}}" --status="${{env.STATUS_COMMENT}}" 
 
       - name: "Evidence: Add regression results for Build ${{env.ENV_VAL}}"
         continue-on-error: true
         run: |
-          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence", "build_promote_stage": "${{env.ENV_VAL}}", "dev-test": "100/100" }' > ./${{env.EVD_SPEC_JSON}}
+          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence", "build_promote_stage": "${{env.ENV_VAL}}", "qa-test": "100/100" }' > ./${{env.EVD_SPEC_JSON}}
           cat ./${{env.EVD_SPEC_JSON}}
           jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/signature/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
 
-
-  metadata_info:
-    name: "Metadata Job Info - DEV update"
-    runs-on: ubuntu-latest
-    needs: 
-      - dockerBuildPromote2Dev
-      - mvnBuildPromote2Dev
-      - gradleBuildPromote2Dev
-    env:
-      METADATA_NAME: "bpr-metadata"
-      METADATA_FILE: "bpr_run_number.txt"
-    steps:
-      - name: "Read metadata"
-        id: read
-        run: |
-          while IFS='=' read -r key value; do
-            echo "$key=$value" >> $GITHUB_OUTPUT
-          done < ${{env.METADATA_FILE}}
-
-      - name: "Use metadata"
-        run: |
-          echo "Build Run Number = ${{ steps.read.outputs.bpr_run_number }}"
-          echo "Commit SHA      = ${{ steps.read.outputs.commit_sha }}"
       
-      - name: "Update stage and re-save"
-        run: |
-          echo "pipeline_stage=dev" >> ${{env.METADATA_FILE}}
-
-      - name: "Re-upload metadata for QA"
-        uses: actions/upload-artifact@v4
-        with:
-          name: bpr-metadata
-          path: bpr_run_number.txt
-          retention-days: 7
-
-      - name: "Show file"
-        run: |
-          cat ${{env.METADATA_FILE}}
-
-      - name: "Re-Upload run number artifact"
-        uses: actions/upload-artifact@v7  # https://github.com/actions/upload-artifact
-        with:
-          name: ${{env.METADATA_NAME}}
-          path: ${{env.METADATA_FILE}}
-          retention-days: 7      

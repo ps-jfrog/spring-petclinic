@@ -2,14 +2,14 @@
 clear
 
 export JF_NAME="psazuse" JFROG_CLI_LOG_LEVEL="DEBUG" 
-export JF_RT_URL="https://${JF_NAME}.jfrog.io" RT_REPO_VIRTUAL="cli-spring-petclinic-virtual" 
-export RT_REPO_SNAPSHOT_LOCAL="cli-spring-petclinic-snapshot-local" RT_REPO_DEV_LOCAL="cli-spring-petclinic-dev-local"
+export JF_RT_URL="https://${JF_NAME}.jfrog.io" RT_REPO_VIRTUAL="bpr-spring-petclinic-docker-virtual" 
 
+export PROJECT_KEY="ps-build-promote"
 export BUILD_NAME="spring-petclinic" BUILD_ID="cmd.$(date '+%Y-%m-%d-%H-%M')" 
 
 jf mvnc --global --repo-resolve-releases ${RT_REPO_VIRTUAL} --repo-resolve-snapshots ${RT_REPO_VIRTUAL} 
 
-jf mvn clean install -DskipTests=true --build-name ${BUILD_NAME} --build-number ${BUILD_ID} --detailed-summary=true
+jf mvn clean install -DskipTests=true --build-name ${BUILD_NAME} --build-number ${BUILD_ID} --detailed-summary=true --project $PROJECT_KEY
 
 sleep 2
 echo "\n*** Build publish: name: ${BUILD_NAME} ID: ${BUILD_ID} \n"
