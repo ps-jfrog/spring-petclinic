@@ -275,13 +275,13 @@ jobs:
            jf rt curl "/api/build/${{env.BUILD_NAME}}/${{env.BUILD_ID}}" -o $BUILD_INFO_JSON
            cat $BUILD_INFO_JSON
 
-      - name: "Sleep for few seconds"
-        env: 
-          SLEEP_TIME: 30
-        run: |
-           echo "Sleeping for ${{env.SLEEP_TIME}} seconds..."
-           sleep ${{env.SLEEP_TIME}}  # Sleeping for 20 seconds before executing the build publish seems to have resolved the build-scan issue. This delay might be helping with synchronization or resource availability, ensuring a smooth build process.
-           echo "Awake now!"
+      # - name: "Sleep for few seconds"
+      #   env: 
+      #     SLEEP_TIME: 20
+      #   run: |
+      #      echo "Sleeping for ${{env.SLEEP_TIME}} seconds..."
+      #      sleep ${{env.SLEEP_TIME}}  # Sleeping for 20 seconds before executing the build publish seems to have resolved the build-scan issue. This delay might be helping with synchronization or resource availability, ensuring a smooth build process.
+      #      echo "Awake now!"
 
       - name: "Optional: Query - Build Scan status"
         run: |
@@ -489,13 +489,13 @@ jobs:
            jf rt curl "/api/build/${{env.BUILD_NAME}}/${{env.BUILD_ID}}" -o ${{env.BUILD_INFO_JSON}}
            cat ${{env.BUILD_INFO_JSON}}
 
-      - name: "Sleep for few seconds"
-        env: 
-          SLEEP_TIME: 30
-        run: |
-           echo "Sleeping for ${{env.SLEEP_TIME}} seconds..."
-           sleep ${{env.SLEEP_TIME}}  # Sleeping for 20 seconds before executing the build publish seems to have resolved the build-scan issue. This delay might be helping with synchronization or resource availability, ensuring a smooth build process.
-           echo "Awake now!"
+      # - name: "Sleep for few seconds"
+      #   env: 
+      #     SLEEP_TIME: 30
+      #   run: |
+      #      echo "Sleeping for ${{env.SLEEP_TIME}} seconds..."
+      #      sleep ${{env.SLEEP_TIME}}  # Sleeping for 20 seconds before executing the build publish seems to have resolved the build-scan issue. This delay might be helping with synchronization or resource availability, ensuring a smooth build process.
+      #      echo "Awake now!"
 
       - name: "Optional: Query - Build Scan status"
         run: |
