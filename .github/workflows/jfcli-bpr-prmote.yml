@@ -1,4 +1,4 @@
-name: "BPR: Promote to DEV"
+name: "BPR: Promote"
 on: 
   workflow_run:
     workflows: 
