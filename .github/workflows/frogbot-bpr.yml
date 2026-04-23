@@ -39,7 +39,7 @@ jobs:
       #     npm_u_v=`npm -v`
       #     echo "NPM_VER=${npm_u_v}" >> $GITHUB_ENV
           
-      - uses: jfrog/frogbot@v2    # ref: https://github.com/jfrog/frogbot
+      - uses: jfrog/frogbot@v2    # ref: https://github.com/jfrog/frogbot  # https://docs.jfrog.com/security/docs/frogbot-optional-configuration-parameters
         env:
           JF_URL: https://${{ vars.JF_NAME }}.jfrog.io
           JFROG_CLI_LOG_LEVEL: "DEBUG"

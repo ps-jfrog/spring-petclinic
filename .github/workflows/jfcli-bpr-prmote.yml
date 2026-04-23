@@ -21,7 +21,6 @@ env:
   CLI_LOG_LEVEL: DEBUG # DEBUG, INFO, WARN, ERROR
   JAVA_DISTRIBUTION: 'temurin'
   JAVA_VERSION: '25'
-  EVD_SPEC_JSON: "evd-spec-info.json"  # ref https://jfrog.com/help/r/jfrog-artifactory-documentation/evidence-setup
   #RBV2_SIGNING_KEY: "${{secrets.RBV2_SIGNING_KEY}}" # ref https://jfrog.com/help/r/jfrog-artifactory-documentation/create-signing-keys-for-release-bundles-v2
   DEFAULT_WORKSPACE: "${{github.workspace}}"  # /home/runner/work/spring-petclinic/spring-petclinic
 
@@ -62,8 +61,11 @@ jobs:
           jf rt bpr "${{ env.BUILD_NAME }}" "${{ env.BUILD_ID }}" "${{ env.RT_REPO_DEV_LOCAL }}" --project="${{env.PROJECT_KEY}}" --status="${{env.STATUS_COMMENT}}" --include-dependencies
 
       - name: "Evidence: Add regression results for Build ${{env.ENV_VAL}}"
+        continue-on-error: true
+        env:
+          EVD_SPEC_JSON: 'dkr-evd-dev-spec-info.json'  # ref https://jfrog.com/help/r/jfrog-artifactory-documentation/evidence-setup
         run: |
-          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence", "build_promote_stage": "${{env.ENV_VAL}}", "dev-docker-test": "100/100" }' > ./${{env.EVD_SPEC_JSON}}
+          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "DKR-Evidence-DEV-Promote", "build_promote_stage": "${{env.ENV_VAL}}", "dev-docker-test": "100/100" }' > ./${{env.EVD_SPEC_JSON}}
           cat ./${{env.EVD_SPEC_JSON}}
           jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/signature/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
 
@@ -104,8 +106,10 @@ jobs:
 
       - name: "Evidence: Add regression results for Build ${{env.ENV_VAL}}"
         continue-on-error: true
+        env:
+          EVD_SPEC_JSON: 'mvn-evd-dev-spec-info.json'  # ref https://jfrog.com/help/r/jfrog-artifactory-documentation/evidence-setup
         run: |
-          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence", "build_promote_stage": "${{env.ENV_VAL}}", "dev-test": "100/100" }' > ./${{env.EVD_SPEC_JSON}}
+          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "MVN-Evidence-DEV-Promote", "build_promote_stage": "${{env.ENV_VAL}}", "dev-test": "100/100" }' > ./${{env.EVD_SPEC_JSON}}
           cat ./${{env.EVD_SPEC_JSON}}
           jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/signature/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
 
@@ -146,8 +150,10 @@ jobs:
 
       - name: "Evidence: Add regression results for Build ${{env.ENV_VAL}}"
         continue-on-error: true
+        env:
+          EVD_SPEC_JSON: 'gdl-evd-dev-spec-info.json'  # ref https://jfrog.com/help/r/jfrog-artifactory-documentation/evidence-setup
         run: |
-          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence", "build_promote_stage": "${{env.ENV_VAL}}", "dev-test": "100/100" }' > ./${{env.EVD_SPEC_JSON}}
+          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "GDL-Evidence-DEV-Promote", "build_promote_stage": "${{env.ENV_VAL}}", "dev-test": "100/100" }' > ./${{env.EVD_SPEC_JSON}}
           cat ./${{env.EVD_SPEC_JSON}}
           jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/signature/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
 
@@ -189,8 +195,10 @@ jobs:
 
       - name: "Evidence: Add regression results for Build ${{env.ENV_VAL}}"
         continue-on-error: true
+        env:
+          EVD_SPEC_JSON: 'dkr-evd-qa-spec-info.json'  # ref https://jfrog.com/help/r/jfrog-artifactory-documentation/evidence-setup
         run: |
-          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence", "build_promote_stage": "${{env.ENV_VAL}}", "qa-docker-test": "100/100" }' > ./${{env.EVD_SPEC_JSON}}
+          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "DKR-Evidence-QA-Promote", "build_promote_stage": "${{env.ENV_VAL}}", "qa-docker-test": "100/100" }' > ./${{env.EVD_SPEC_JSON}}
           cat ./${{env.EVD_SPEC_JSON}}
           jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/signature/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
 
@@ -233,8 +241,10 @@ jobs:
 
       - name: "Evidence: Add regression results for Build ${{env.ENV_VAL}}"
         continue-on-error: true
+        env:
+          EVD_SPEC_JSON: 'mvn-evd-qa-spec-info.json'  # ref https://jfrog.com/help/r/jfrog-artifactory-documentation/evidence-setup
         run: |
-          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence", "build_promote_stage": "${{env.ENV_VAL}}", "qa-test": "100/100" }' > ./${{env.EVD_SPEC_JSON}}
+          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "MVN-Evidence-QA-Promote", "build_promote_stage": "${{env.ENV_VAL}}", "qa-test": "100/100" }' > ./${{env.EVD_SPEC_JSON}}
           cat ./${{env.EVD_SPEC_JSON}}
           jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/signature/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
 
@@ -277,8 +287,10 @@ jobs:
 
       - name: "Evidence: Add regression results for Build ${{env.ENV_VAL}}"
         continue-on-error: true
+        env:
+          EVD_SPEC_JSON: 'gdl-evd-qa-spec-info.json'  # ref https://jfrog.com/help/r/jfrog-artifactory-documentation/evidence-setup
         run: |
-          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence", "build_promote_stage": "${{env.ENV_VAL}}", "qa-test": "100/100" }' > ./${{env.EVD_SPEC_JSON}}
+          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "GDL-Evidence-QA-Promote", "build_promote_stage": "${{env.ENV_VAL}}", "qa-test": "100/100" }' > ./${{env.EVD_SPEC_JSON}}
           cat ./${{env.EVD_SPEC_JSON}}
           jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/signature/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
 
@@ -321,8 +333,10 @@ jobs:
 
       - name: "Evidence: Add regression results for Build ${{env.ENV_VAL}}"
         continue-on-error: true
+        env:
+          EVD_SPEC_JSON: 'dkr-evd-prod-spec-info.json'  # ref https://jfrog.com/help/r/jfrog-artifactory-documentation/evidence-setup
         run: |
-          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence", "build_promote_stage": "${{env.ENV_VAL}}", "qa-docker-test": "100/100" }' > ./${{env.EVD_SPEC_JSON}}
+          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "DKR-Evidence-PROD-Promote", "build_promote_stage": "${{env.ENV_VAL}}", "qa-docker-test": "100/100" }' > ./${{env.EVD_SPEC_JSON}}
           cat ./${{env.EVD_SPEC_JSON}}
           jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/signature/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
 
@@ -365,8 +379,10 @@ jobs:
 
       - name: "Evidence: Add regression results for Build ${{env.ENV_VAL}}"
         continue-on-error: true
+        env:
+          EVD_SPEC_JSON: 'mvn-evd-prod-spec-info.json'  # ref https://jfrog.com/help/r/jfrog-artifactory-documentation/evidence-setup
         run: |
-          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence", "build_promote_stage": "${{env.ENV_VAL}}", "prod-test": "100/100" }' > ./${{env.EVD_SPEC_JSON}}
+          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "MVN-Evidence-PROD-Promote", "build_promote_stage": "${{env.ENV_VAL}}", "prod-test": "100/100" }' > ./${{env.EVD_SPEC_JSON}}
           cat ./${{env.EVD_SPEC_JSON}}
           jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/signature/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
 
@@ -409,8 +425,10 @@ jobs:
 
       - name: "Evidence: Add regression results for Build ${{env.ENV_VAL}}"
         continue-on-error: true
+        env:
+          EVD_SPEC_JSON: 'gdl-evd-prod-spec-info.json'  # ref https://jfrog.com/help/r/jfrog-artifactory-documentation/evidence-setup
         run: |
-          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence", "build_promote_stage": "${{env.ENV_VAL}}", "prod-test": "100/100" }' > ./${{env.EVD_SPEC_JSON}}
+          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "GDL-Evidence-PROD-Promote", "build_promote_stage": "${{env.ENV_VAL}}", "prod-test": "100/100" }' > ./${{env.EVD_SPEC_JSON}}
           cat ./${{env.EVD_SPEC_JSON}}
           jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/signature/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
 
