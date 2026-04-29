@@ -48,6 +48,16 @@ jobs:
           oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
           disable-job-summary: ${{env.JOB_SUMMARY}}
 
+      - name: "Evidence: Promotion approval ${{env.ENV_VAL}}"
+        continue-on-error: true
+        env:
+          EVD_SPEC_JSON: 'dkr-evd-dev-approved-info.json'  # ref https://docs.jfrog.com/governance/docs/evidence-payload
+        run: |
+          echo '{ "promoter": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "DKR-Evidence-DEV-Deploy Approver", "build_promote_stage": "${{env.ENV_VAL}}"}' > ./${{env.EVD_SPEC_JSON}}
+          cat ./${{env.EVD_SPEC_JSON}}
+          jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/approval/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
+
+
       - name: "Xray - Build scan"
         timeout-minutes: 15   
         continue-on-error: true  
@@ -92,6 +102,15 @@ jobs:
           oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
           disable-job-summary: ${{env.JOB_SUMMARY}}
 
+      - name: "Evidence: Promotion approval ${{env.ENV_VAL}}"
+        continue-on-error: true
+        env:
+          EVD_SPEC_JSON: 'mvn-evd-dev-approved-info.json'  # ref https://docs.jfrog.com/governance/docs/evidence-payload
+        run: |
+          echo '{ "promoter": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "MVN-Evidence-DEV-Deploy Approver", "build_promote_stage": "${{env.ENV_VAL}}"}' > ./${{env.EVD_SPEC_JSON}}
+          cat ./${{env.EVD_SPEC_JSON}}
+          jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/approval/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
+
       - name: "Xray - Build scan"
         timeout-minutes: 15   
         continue-on-error: true  
@@ -135,6 +154,15 @@ jobs:
           version: latest  #2.71.0
           oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
           disable-job-summary: ${{env.JOB_SUMMARY}}
+
+      - name: "Evidence: Promotion approval ${{env.ENV_VAL}}"
+        continue-on-error: true
+        env:
+          EVD_SPEC_JSON: 'gdl-evd-dev-approved-info.json'  # ref https://docs.jfrog.com/governance/docs/evidence-payload
+        run: |
+          echo '{ "promoter": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "GDL-Evidence-DEV-Deploy Approver", "build_promote_stage": "${{env.ENV_VAL}}"}' > ./${{env.EVD_SPEC_JSON}}
+          cat ./${{env.EVD_SPEC_JSON}}
+          jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/approval/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
 
       - name: "Xray - Build scan"
         timeout-minutes: 15   
@@ -181,6 +209,15 @@ jobs:
           oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
           disable-job-summary: ${{env.JOB_SUMMARY}}
 
+      - name: "Evidence: Promotion approval ${{env.ENV_VAL}}"
+        continue-on-error: true
+        env:
+          EVD_SPEC_JSON: 'dkr-evd-qa-approved-info.json'  # ref https://docs.jfrog.com/governance/docs/evidence-payload
+        run: |
+          echo '{ "promoter": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "DKR-Evidence-QA-Deploy Approver", "build_promote_stage": "${{env.ENV_VAL}}"}' > ./${{env.EVD_SPEC_JSON}}
+          cat ./${{env.EVD_SPEC_JSON}}
+          jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/approval/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
+
       - name: "Xray - Build scan"
         timeout-minutes: 15   
         continue-on-error: true  
@@ -201,7 +238,6 @@ jobs:
           echo '{ "actor": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "DKR-Evidence-QA-Promote", "build_promote_stage": "${{env.ENV_VAL}}", "qa-docker-test": "100/100" }' > ./${{env.EVD_SPEC_JSON}}
           cat ./${{env.EVD_SPEC_JSON}}
           jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/signature/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
-
 
   mvnBuildPromote2QA:
     name: "MVN: Promote to QA local repo"
@@ -227,6 +263,15 @@ jobs:
           oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
           disable-job-summary: ${{env.JOB_SUMMARY}}
 
+      - name: "Evidence: Promotion approval ${{env.ENV_VAL}}"
+        continue-on-error: true
+        env:
+          EVD_SPEC_JSON: 'mvn-evd-qa-approved-info.json'  # ref https://docs.jfrog.com/governance/docs/evidence-payload
+        run: |
+          echo '{ "promoter": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "MVN-Evidence-QA-Deploy Approver", "build_promote_stage": "${{env.ENV_VAL}}"}' > ./${{env.EVD_SPEC_JSON}}
+          cat ./${{env.EVD_SPEC_JSON}}
+          jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/approval/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
+
       - name: "Xray - Build scan"
         timeout-minutes: 15   
         continue-on-error: true  
@@ -247,7 +292,6 @@ jobs:
           echo '{ "actor": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "MVN-Evidence-QA-Promote", "build_promote_stage": "${{env.ENV_VAL}}", "qa-test": "100/100" }' > ./${{env.EVD_SPEC_JSON}}
           cat ./${{env.EVD_SPEC_JSON}}
           jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/signature/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
-
 
   gradleBuildPromote2QA:
     name: "Gradle: Promote to QA local repo"
@@ -273,6 +317,15 @@ jobs:
           oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
           disable-job-summary: ${{env.JOB_SUMMARY}}
 
+      - name: "Evidence: Promotion approval ${{env.ENV_VAL}}"
+        continue-on-error: true
+        env:
+          EVD_SPEC_JSON: 'gdl-evd-qa-approved-info.json'  # ref https://docs.jfrog.com/governance/docs/evidence-payload
+        run: |
+          echo '{ "promoter": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "GDL-Evidence-QA-Deploy Approver", "build_promote_stage": "${{env.ENV_VAL}}"}' > ./${{env.EVD_SPEC_JSON}}
+          cat ./${{env.EVD_SPEC_JSON}}
+          jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/approval/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
+
       - name: "Xray - Build scan"
         timeout-minutes: 15   
         continue-on-error: true  
@@ -293,7 +346,6 @@ jobs:
           echo '{ "actor": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "GDL-Evidence-QA-Promote", "build_promote_stage": "${{env.ENV_VAL}}", "qa-test": "100/100" }' > ./${{env.EVD_SPEC_JSON}}
           cat ./${{env.EVD_SPEC_JSON}}
           jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/signature/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
-
 
   dockerBuildPromote2Prod:
     name: "Docker: Promote to PROD local repo"
@@ -319,6 +371,15 @@ jobs:
           oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
           disable-job-summary: ${{env.JOB_SUMMARY}}
 
+      - name: "Evidence: Promotion approval ${{env.ENV_VAL}}"
+        continue-on-error: true
+        env:
+          EVD_SPEC_JSON: 'dkr-evd-prod-approved-info.json'  # ref https://docs.jfrog.com/governance/docs/evidence-payload
+        run: |
+          echo '{ "promoter": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "DKR-Evidence-PROD-Deploy Approver", "build_promote_stage": "${{env.ENV_VAL}}"}' > ./${{env.EVD_SPEC_JSON}}
+          cat ./${{env.EVD_SPEC_JSON}}
+          jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/approval/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
+
       - name: "Xray - Build scan"
         timeout-minutes: 15   
         continue-on-error: true  
@@ -339,7 +400,6 @@ jobs:
           echo '{ "actor": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "DKR-Evidence-PROD-Promote", "build_promote_stage": "${{env.ENV_VAL}}", "qa-docker-test": "100/100" }' > ./${{env.EVD_SPEC_JSON}}
           cat ./${{env.EVD_SPEC_JSON}}
           jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/signature/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
-
 
   mvnBuildPromote2Prod:
     name: "MVN: Promote to PROD local repo"
@@ -365,6 +425,15 @@ jobs:
           oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
           disable-job-summary: ${{env.JOB_SUMMARY}}
 
+      - name: "Evidence: Promotion approval ${{env.ENV_VAL}}"
+        continue-on-error: true
+        env:
+          EVD_SPEC_JSON: 'mvn-evd-prod-approved-info.json'  # ref https://docs.jfrog.com/governance/docs/evidence-payload
+        run: |
+          echo '{ "promoter": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "MVN-Evidence-PROD-Deploy Approver", "build_promote_stage": "${{env.ENV_VAL}}"}' > ./${{env.EVD_SPEC_JSON}}
+          cat ./${{env.EVD_SPEC_JSON}}
+          jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/approval/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
+
       - name: "Xray - Build scan"
         timeout-minutes: 15   
         continue-on-error: true  
@@ -385,7 +454,6 @@ jobs:
           echo '{ "actor": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "MVN-Evidence-PROD-Promote", "build_promote_stage": "${{env.ENV_VAL}}", "prod-test": "100/100" }' > ./${{env.EVD_SPEC_JSON}}
           cat ./${{env.EVD_SPEC_JSON}}
           jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/signature/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
-
 
   gradleBuildPromote2Prod:
     name: "Gradle: Promote to PROD local repo"
@@ -410,6 +478,15 @@ jobs:
           version: latest  #2.71.0
           oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
           disable-job-summary: ${{env.JOB_SUMMARY}}
+
+      - name: "Evidence: Promotion approval ${{env.ENV_VAL}}"
+        continue-on-error: true
+        env:
+          EVD_SPEC_JSON: 'gdl-evd-prod-approved-info.json'  # ref https://docs.jfrog.com/governance/docs/evidence-payload
+        run: |
+          echo '{ "promoter": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "GDL-Evidence-PROD-Deploy Approver", "build_promote_stage": "${{env.ENV_VAL}}"}' > ./${{env.EVD_SPEC_JSON}}
+          cat ./${{env.EVD_SPEC_JSON}}
+          jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/approval/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
 
       - name: "Xray - Build scan"
         timeout-minutes: 15   
