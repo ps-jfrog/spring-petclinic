@@ -52,8 +52,9 @@ jobs:
         continue-on-error: true
         env:
           EVD_SPEC_JSON: 'dkr-evd-dev-approved-info.json'  # ref https://docs.jfrog.com/governance/docs/evidence-payload
+          DATE_TS: $(date +%Y-%m-%d-%H-%M-%S)
         run: |
-          echo '{ "promoter": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "DKR-Evidence-DEV-Deploy Approver", "build_promote_stage": "${{env.ENV_VAL}}"}' > ./${{env.EVD_SPEC_JSON}}
+          echo '{ "actor": "${{github.actor}}", "action": "approved", "date": "${{env.DATE_TS}}", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "comment": "Promotion ${{env.ENV_VAL}} approved by ${{github.actor}} on ${{env.DATE_TS}}"' > ./${{env.EVD_SPEC_JSON}}
           cat ./${{env.EVD_SPEC_JSON}}
           jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/approval/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
 
@@ -106,8 +107,9 @@ jobs:
         continue-on-error: true
         env:
           EVD_SPEC_JSON: 'mvn-evd-dev-approved-info.json'  # ref https://docs.jfrog.com/governance/docs/evidence-payload
+          DATE_TS: $(date +%Y-%m-%d-%H-%M-%S)
         run: |
-          echo '{ "promoter": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "MVN-Evidence-DEV-Deploy Approver", "build_promote_stage": "${{env.ENV_VAL}}"}' > ./${{env.EVD_SPEC_JSON}}
+          echo '{ "actor": "${{github.actor}}", "action": "approved", "date": "${{env.DATE_TS}}", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "comment": "Promotion ${{env.ENV_VAL}} approved by ${{github.actor}} on ${{env.DATE_TS}}"' > ./${{env.EVD_SPEC_JSON}}
           cat ./${{env.EVD_SPEC_JSON}}
           jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/approval/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
 
@@ -158,9 +160,10 @@ jobs:
       - name: "Evidence: Promotion approval ${{env.ENV_VAL}}"
         continue-on-error: true
         env:
-          EVD_SPEC_JSON: 'gdl-evd-dev-approved-info.json'  # ref https://docs.jfrog.com/governance/docs/evidence-payload
+          EVD_SPEC_JSON: 'gdl-evd-dev-approved-info.json' 
+          DATE_TS: $(date +%Y-%m-%d-%H-%M-%S)
         run: |
-          echo '{ "promoter": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "GDL-Evidence-DEV-Deploy Approver", "build_promote_stage": "${{env.ENV_VAL}}"}' > ./${{env.EVD_SPEC_JSON}}
+          echo '{ "actor": "${{github.actor}}", "action": "approved", "date": "${{env.DATE_TS}}", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "comment": "Promotion ${{env.ENV_VAL}} approved by ${{github.actor}} on ${{env.DATE_TS}}"' > ./${{env.EVD_SPEC_JSON}}
           cat ./${{env.EVD_SPEC_JSON}}
           jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/approval/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
 
@@ -213,8 +216,9 @@ jobs:
         continue-on-error: true
         env:
           EVD_SPEC_JSON: 'dkr-evd-qa-approved-info.json'  # ref https://docs.jfrog.com/governance/docs/evidence-payload
+          DATE_TS: $(date +%Y-%m-%d-%H-%M-%S)
         run: |
-          echo '{ "promoter": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "DKR-Evidence-QA-Deploy Approver", "build_promote_stage": "${{env.ENV_VAL}}"}' > ./${{env.EVD_SPEC_JSON}}
+          echo '{ "actor": "${{github.actor}}", "action": "approved", "date": "${{env.DATE_TS}}", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "comment": "Promotion ${{env.ENV_VAL}} approved by ${{github.actor}} on ${{env.DATE_TS}}"' > ./${{env.EVD_SPEC_JSON}}
           cat ./${{env.EVD_SPEC_JSON}}
           jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/approval/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
 
@@ -267,8 +271,9 @@ jobs:
         continue-on-error: true
         env:
           EVD_SPEC_JSON: 'mvn-evd-qa-approved-info.json'  # ref https://docs.jfrog.com/governance/docs/evidence-payload
+          DATE_TS: $(date +%Y-%m-%d-%H-%M-%S)
         run: |
-          echo '{ "promoter": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "MVN-Evidence-QA-Deploy Approver", "build_promote_stage": "${{env.ENV_VAL}}"}' > ./${{env.EVD_SPEC_JSON}}
+          echo '{ "actor": "${{github.actor}}", "action": "approved", "date": "${{env.DATE_TS}}", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "comment": "Promotion ${{env.ENV_VAL}} approved by ${{github.actor}} on ${{env.DATE_TS}}"' > ./${{env.EVD_SPEC_JSON}}
           cat ./${{env.EVD_SPEC_JSON}}
           jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/approval/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
 
@@ -321,8 +326,9 @@ jobs:
         continue-on-error: true
         env:
           EVD_SPEC_JSON: 'gdl-evd-qa-approved-info.json'  # ref https://docs.jfrog.com/governance/docs/evidence-payload
+          DATE_TS: $(date +%Y-%m-%d-%H-%M-%S)
         run: |
-          echo '{ "promoter": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "GDL-Evidence-QA-Deploy Approver", "build_promote_stage": "${{env.ENV_VAL}}"}' > ./${{env.EVD_SPEC_JSON}}
+          echo '{ "actor": "${{github.actor}}", "action": "approved", "date": "${{env.DATE_TS}}", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "comment": "Promotion ${{env.ENV_VAL}} approved by ${{github.actor}} on ${{env.DATE_TS}}"' > ./${{env.EVD_SPEC_JSON}}
           cat ./${{env.EVD_SPEC_JSON}}
           jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/approval/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
 
@@ -375,8 +381,9 @@ jobs:
         continue-on-error: true
         env:
           EVD_SPEC_JSON: 'dkr-evd-prod-approved-info.json'  # ref https://docs.jfrog.com/governance/docs/evidence-payload
+          DATE_TS: $(date +%Y-%m-%d-%H-%M-%S)
         run: |
-          echo '{ "promoter": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "DKR-Evidence-PROD-Deploy Approver", "build_promote_stage": "${{env.ENV_VAL}}"}' > ./${{env.EVD_SPEC_JSON}}
+          echo '{ "actor": "${{github.actor}}", "action": "approved", "date": "${{env.DATE_TS}}", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "comment": "Promotion ${{env.ENV_VAL}} approved by ${{github.actor}} on ${{env.DATE_TS}}"' > ./${{env.EVD_SPEC_JSON}}
           cat ./${{env.EVD_SPEC_JSON}}
           jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/approval/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
 
@@ -429,8 +436,9 @@ jobs:
         continue-on-error: true
         env:
           EVD_SPEC_JSON: 'mvn-evd-prod-approved-info.json'  # ref https://docs.jfrog.com/governance/docs/evidence-payload
+          DATE_TS: $(date +%Y-%m-%d-%H-%M-%S)
         run: |
-          echo '{ "promoter": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "MVN-Evidence-PROD-Deploy Approver", "build_promote_stage": "${{env.ENV_VAL}}"}' > ./${{env.EVD_SPEC_JSON}}
+          echo '{ "actor": "${{github.actor}}", "action": "approved", "date": "${{env.DATE_TS}}", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "comment": "Promotion ${{env.ENV_VAL}} approved by ${{github.actor}} on ${{env.DATE_TS}}"' > ./${{env.EVD_SPEC_JSON}}
           cat ./${{env.EVD_SPEC_JSON}}
           jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/approval/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
 
@@ -483,8 +491,9 @@ jobs:
         continue-on-error: true
         env:
           EVD_SPEC_JSON: 'gdl-evd-prod-approved-info.json'  # ref https://docs.jfrog.com/governance/docs/evidence-payload
+          DATE_TS: $(date +%Y-%m-%d-%H-%M-%S)
         run: |
-          echo '{ "promoter": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "GDL-Evidence-PROD-Deploy Approver", "build_promote_stage": "${{env.ENV_VAL}}"}' > ./${{env.EVD_SPEC_JSON}}
+          echo '{ "actor": "${{github.actor}}", "action": "approved", "date": "${{env.DATE_TS}}", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "comment": "Promotion ${{env.ENV_VAL}} approved by ${{github.actor}} on ${{env.DATE_TS}}"' > ./${{env.EVD_SPEC_JSON}}
           cat ./${{env.EVD_SPEC_JSON}}
           jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/approval/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
 
@@ -510,73 +519,32 @@ jobs:
           jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/signature/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
 
 
+  cleanupBuilds:
+    name: "Cleanup Builds"
+    needs: 
+      - dockerBuildPromote2Prod
+      - mvnBuildPromote2Prod
+      - gradleBuildPromote2Prod
+    runs-on: ubuntu-latest
+    env:
+      MAX_BUILDS: 15 # The maximum number of builds to store in Artifactory
+    defaults:
+       run:
+         working-directory: "${{env.DEFAULT_WORKSPACE}}"
+    steps:
+      - name: "Setup JFrog CLI"
+        uses: jfrog/setup-jfrog-cli@v5
+        id: setup-cli
+        env:
+          JF_URL: ${{env.JF_RT_URL}}
+          JF_PROJECT: "${{env.PROJECT_KEY}}"
+          JFROG_CLI_LOG_LEVEL: "${{env.CLI_LOG_LEVEL}}"
+        with:
+          version: latest  #2.71.0
+          oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
+          disable-job-summary: ${{env.JOB_SUMMARY}}
 
+      - name: "Cleanup Builds"
+        run: |
+          jf rt build-discard ${{env.BUILD_NAME}} --max-builds ${{env.MAX_BUILDS}} --project="${{env.PROJECT_KEY}}" --async=true
 
-      
-  # metadata_info:
-  #   name: "Metadata Job Info - DEV update"
-  #   runs-on: ubuntu-latest
-  #   needs: 
-  #     - dockerBuildPromote2Dev
-  #     - mvnBuildPromote2Dev
-  #     - gradleBuildPromote2Dev
-  #   env:
-  #     BPR_METADATA_NAME: "bpr-metadata-${{github.event.workflow_run.run_number}}"
-  #     BPR_METADATA_FILE: "bpr_run_number-${{github.event.workflow_run.run_number}}.txt"
-  #     DEV_METADATA_NAME: "bpr-metadata-${{ github.run_number }}"
-  #     DEV_METADATA_FILE: "bpr_run_number-${{ github.run_number }}.txt"
-  #   steps:
-  #     - name: "Download metadata from BPR Package run"
-  #       uses: actions/download-artifact@v8
-  #       with:
-  #         name: ${{ env.BPR_METADATA_NAME }}
-  #         path: .
-  #         github-token: ${{ secrets.GITHUB_TOKEN }}
-  #         run-id: ${{ github.event.workflow_run.id }}
-
-  #     - name: "Read metadata"
-  #       id: read
-  #       run: |
-  #         f="${{ env.BPR_METADATA_FILE }}"
-  #         if [[ ! -f "$f" ]]; then
-  #           found="$(find . -name "${{ env.BPR_METADATA_FILE }}" -type f ! -path './.git/*' | head -1)"
-  #           [[ -n "$found" ]] || { echo "::error::${{ env.BPR_METADATA_FILE }} missing after artifact download"; exit 1; }
-  #           cp -f "$found" "$f"
-  #         fi
-  #         while IFS='=' read -r key value; do
-  #           [[ -z "$key" || "$key" =~ ^# ]] && continue
-  #           echo "$key=$value" >> "$GITHUB_OUTPUT"
-  #         done < "$f"
-
-  #     - name: "Use metadata"
-  #       run: |
-  #         cat ${{env.BPR_METADATA_FILE}}
-  #         echo "Build Run Number = ${{ steps.read.outputs.bpr_run_number }}"
-  #         echo "Commit SHA      = ${{ steps.read.outputs.commit_sha }}"
-      
-  #     - name: "Write pipeline metadata info"
-  #       run: |
-  #         {
-  #           echo "bpr_run_number=${{ github.run_number }}"
-  #           echo "pipeline_stage=dev" >> ${{env.DEV_METADATA_FILE}}
-  #           echo "bpr_dev_run_number=${{ github.run_number }}"
-  #           echo "workflow_run_id=${{ github.run_id }}"
-  #           echo "commit_sha=${{ github.sha }}"
-  #           echo "branch=${{ github.ref_name }}"
-  #           echo "project_key=${{ env.PROJECT_KEY }}"
-  #           echo "build_name=${{ env.BUILD_NAME }}"
-  #           echo "build_time=$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
-  #         } > ${{env.DEV_METADATA_FILE}}
-
-
-  #     - name: "Re-upload metadata for QA"
-  #       uses: actions/upload-artifact@v7
-  #       with:
-  #         name: ${{env.DEV_METADATA_NAME}}
-  #         path: ${{env.DEV_METADATA_FILE}}
-  #         retention-days: 7
-  #         overwrite: true
-
-  #     - name: "Show file"
-  #       run: |
-  #         cat ${{env.DEV_METADATA_FILE}}
