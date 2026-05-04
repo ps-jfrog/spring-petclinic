@@ -179,6 +179,7 @@ jobs:
 
       - name: "Package: Docker build and push"
         env:
+          DOCKER_FILE: "./jfrog/Dockerfile"
           JAR_FILE: "./target/${{env.ARTIFACT_NAME}}-${{env.ARTIFACT_VERSION}}.jar"
           TAG10: "${{vars.JF_NAME}}.jfrog.io/${{env.RT_REPO_VIRTUAL}}/${{env.ARTIFACT_NAME}}:${{env.ARTIFACT_VERSION}}"
           TAG11: "${{vars.JF_NAME}}.jfrog.io/${{env.RT_REPO_VIRTUAL}}/${{env.ARTIFACT_NAME}}:${{env.SHORT_COMMIT_CODE}}"
@@ -186,7 +187,7 @@ jobs:
           TAG13: "${{vars.JF_NAME}}.jfrog.io/${{env.RT_REPO_VIRTUAL}}/${{env.ARTIFACT_NAME}}:${{env.BUILD_ID}}"
           TAG14: "${{vars.JF_NAME}}.jfrog.io/${{env.RT_REPO_VIRTUAL}}/${{env.ARTIFACT_NAME}}:latest"
         run: |
-          docker buildx build -f ./jfrog/Dockerfile --build-arg JAR_FILE=${{env.JAR_FILE}} --platform "${{env.DOCKER_BUILDX_PLATFORMS}}" --metadata-file "${{env.DOCKER_METADATA_JSON}}" --push -t ${{env.TAG10}} -t ${{env.TAG11}} -t ${{env.TAG12}} -t ${{env.TAG13}} -t ${{env.TAG14}} .
+          docker buildx build -f ${{env.DOCKER_FILE}} --build-arg JAR_FILE=${{env.JAR_FILE}} --platform "${{env.DOCKER_BUILDX_PLATFORMS}}" --metadata-file "${{env.DOCKER_METADATA_JSON}}" --push -t ${{env.TAG10}} -t ${{env.TAG11}} -t ${{env.TAG12}} -t ${{env.TAG13}} -t ${{env.TAG14}} .
 
       - name: "Optional: Docker pull image"
         run: |
@@ -202,11 +203,12 @@ jobs:
       - name: "Evidence: Package"
         continue-on-error: true 
         env:
-          EVD_SPEC_JSON: 'dkr-evd-package-spec-info.json'  # ref https://jfrog.com/help/r/jfrog-artifactory-documentation/evidence-setup
+          EVD_SPEC_JSON: './dkr-evd-package-spec-info.json'  # ref https://jfrog.com/help/r/jfrog-artifactory-documentation/evidence-setup
+          PREDICATE_TYPE: "https://jfrog.com/evidence/signature/v1"
         run: |
-          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions","build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd":"Evidence-Package", "package":"${{env.RT_REPO_DOCKER_URL}}" }' > ./${{env.EVD_SPEC_JSON}}
-          cat ./${{env.EVD_SPEC_JSON}}
-          jf evd create --package-name ${{env.BUILD_NAME}} --package-version ${{env.BUILD_ID}} --package-repo-name ${{env.RT_REPO_VIRTUAL}} --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}"  --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/signature/v1 --project="${{env.PROJECT_KEY}}"
+          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions","build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd":"Evidence-Package", "package":"${{env.RT_REPO_DOCKER_URL}}" }' > ${{env.EVD_SPEC_JSON}}
+          cat ${{env.EVD_SPEC_JSON}}
+          jf evd create --package-name="${{env.BUILD_NAME}}" --package-version="${{env.BUILD_ID}}" --package-repo-name="${{env.RT_REPO_VIRTUAL}}" --key="${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}"  --key-alias="${{secrets.EVIDENCE_KEY_ALIAS}}" --predicate="${{env.EVD_SPEC_JSON}}" --predicate-type="${{env.PREDICATE_TYPE}}" --project="${{env.PROJECT_KEY}}"
 
       - name: "Package: Xray - docker Artifact scan"
         timeout-minutes: 15    # ref https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#jobsjob_idstepstimeout-minutes
@@ -254,15 +256,12 @@ jobs:
       - name: "Evidence: Build Publish"
         continue-on-error: true 
         env:
-          EVD_SPEC_JSON: 'dkr-evd-bp-spec-info.json'  # ref https://jfrog.com/help/r/jfrog-artifactory-documentation/evidence-setup
+          EVD_SPEC_JSON: './dkr-evd-bp-spec-info.json'  # ref https://jfrog.com/help/r/jfrog-artifactory-documentation/evidence-setup
           PREDICATE_TYPE: "https://jfrog.com/evidence/build-signature/v1"
         run: |
-          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions","build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence-BuildPublish"}' > ./${{env.EVD_SPEC_JSON}}
-          cat ./${{env.EVD_SPEC_JSON}}
+          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions","build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence-BuildPublish"}' > ${{env.EVD_SPEC_JSON}}
+          cat ${{env.EVD_SPEC_JSON}}
           jf evd create --build-name="${{env.BUILD_NAME}}" --build-number="${{env.BUILD_ID}}" --predicate="${{env.EVD_SPEC_JSON}}" --predicate-type="${{env.PREDICATE_TYPE}}" --key="${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias="${{secrets.EVIDENCE_KEY_ALIAS}}" --project="${{env.PROJECT_KEY}}"
-          # jf evd create --build-name="spring-petclinic" --build-number="cmd.2026-05-04-12-09" --predicate="./evd-spec-bp.json" --predicate-type="https://jfrog.com/evidence/build-signature/v1" --key="$(cat ~/.ssh/jfrog_evd_private.pem)" --key-alias="KRISHNAM_JFROG_EVD_PUBLICKEY" --project="ps-build-promote"    
-
-
 
       # curl -L 'https://psazuse.jfrog.io/xray/api/v1/binMgr/builds' -H 'Content-Type: application/json' -H 'Authorization: ••••••' -d '{  "names": ["spring-petclinic"] }'
       - name: "Optional: Add Builds to Indexing Configuration"
@@ -472,23 +471,28 @@ jobs:
       - name: "Evidence: Build Info"
         continue-on-error: true 
         env:
-            EVD_JSON: "target/build-info.json"
+          EVD_JSON: "./target/build-info.json"
+          PREDICATE_TYPE: "https://jfrog.com/evidence/signature/v1"
         run: |
-          cat ./${{env.EVD_JSON}}
-          jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_JSON}} --predicate-type https://jfrog.com/evidence/signature/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
+          cat ${{env.EVD_JSON}}
+          jf evd create --build-name="${{env.BUILD_NAME}}" --build-number="${{env.BUILD_ID}}" --predicate="${{env.EVD_JSON}}" --predicate-type="${{env.PREDICATE_TYPE}}"  --key="${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias="${{secrets.EVIDENCE_KEY_ALIAS}}" --project="${{env.PROJECT_KEY}}"
 
       - name: "Evidence: cdx"
         continue-on-error: true 
         env:
-            EVD_JSON: "target/classes/META-INF/sbom/application.cdx.json"      # https://jfrog.com/evidence/signature/v1
+          EVD_JSON: "./target/classes/META-INF/sbom/application.cdx.json"      # https://jfrog.com/evidence/signature/v1
+          PREDICATE_TYPE: "https://cyclonedx.org/bom/v1.4"
         run: |
-          cat ./${{env.EVD_JSON}}
-          jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_JSON}} --predicate-type https://cyclonedx.org/bom/v1.4 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
+          cat ${{env.EVD_JSON}}
+          jf evd create --build-name="${{env.BUILD_NAME}}" --build-number="${{env.BUILD_ID}}" --predicate="${{env.EVD_JSON}}" --predicate-type="${{env.PREDICATE_TYPE}}" --key="${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias="${{secrets.EVIDENCE_KEY_ALIAS}}" --project="${{env.PROJECT_KEY}}"
           
       - name: "Evidence: Junit Tests results"
         continue-on-error: true 
+        env:
+          JUNIT_TEST_RESULTS_JSON: "./target/surefire-reports/test-results.json"
+          PREDICATE_TYPE: "https://jfrog.com/evidence/test-results/v1"
         run: |
-          jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.JUNIT_TEST_RESULTS_JSON}} --predicate-type https://jfrog.com/evidence/test-results/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
+          jf evd create --build-name="${{env.BUILD_NAME}}" --build-number="${{env.BUILD_ID}}" --predicate="${{env.JUNIT_TEST_RESULTS_JSON}}" --predicate-type="${{env.PREDICATE_TYPE}}" --key="${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias="${{secrets.EVIDENCE_KEY_ALIAS}}" --project="${{env.PROJECT_KEY}}"
 
       - name: "Evidence: Build Publish"
         continue-on-error: true 
@@ -496,10 +500,9 @@ jobs:
           EVD_SPEC_JSON: './mvn-evd-bp-spec-info.json'  # ref https://jfrog.com/help/r/jfrog-artifactory-documentation/evidence-setup
           PREDICATE_TYPE: "https://jfrog.com/evidence/build-signature/v1"
         run: |
-          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions","build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence-BuildPublish"}' > ./${{env.EVD_SPEC_JSON}}
-          cat ./${{env.EVD_SPEC_JSON}}
+          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions","build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence-BuildPublish"}' > ${{env.EVD_SPEC_JSON}}
+          cat ${{env.EVD_SPEC_JSON}}
           jf evd create --build-name="${{env.BUILD_NAME}}" --build-number="${{env.BUILD_ID}}" --predicate="${{env.EVD_SPEC_JSON}}" --predicate-type="${{env.PREDICATE_TYPE}}" --key="${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias="${{secrets.EVIDENCE_KEY_ALIAS}}" --project="${{env.PROJECT_KEY}}"
-          # jf evd create --build-name="spring-petclinic" --build-number="cmd.2026-05-04-12-09" --predicate="./evd-spec-bp.json" --predicate-type="https://jfrog.com/evidence/build-signature/v1" --key="$(cat ~/.ssh/jfrog_evd_private.pem)" --key-alias="KRISHNAM_JFROG_EVD_PUBLICKEY" --project="ps-build-promote"
 
       - name: "Optional: Add Builds to Indexing Configuration"
         run: |
@@ -674,10 +677,11 @@ jobs:
       - name: "Evidence: cdx"
         continue-on-error: true 
         env:
-            EVD_JSON: "build/reports/application.cdx.json"    # https://jfrog.com/help/r/jfrog-artifactory-documentation/evidence-payload
+          EVD_JSON: "./build/reports/application.cdx.json"    # https://jfrog.com/help/r/jfrog-artifactory-documentation/evidence-payload
+          PREDICATE_TYPE: "https://cyclonedx.org/bom/v1.4"
         run: |
-          cat ./${{env.EVD_JSON}}
-          jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_JSON}} --predicate-type https://cyclonedx.org/bom/v1.4 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
+          cat ${{env.EVD_JSON}}
+          jf evd create --build-name="${{env.BUILD_NAME}}" --build-number="${{env.BUILD_ID}}" --predicate="${{env.EVD_JSON}}" --predicate-type="${{env.PREDICATE_TYPE}}" --key="${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias="${{secrets.EVIDENCE_KEY_ALIAS}}" --project="${{env.PROJECT_KEY}}"
 
       - name: "Evidence: Build Publish"
         continue-on-error: true 
@@ -685,10 +689,9 @@ jobs:
           EVD_SPEC_JSON: './gdl-evd-bp-spec-info.json'  # ref https://jfrog.com/help/r/jfrog-artifactory-documentation/evidence-setup
           PREDICATE_TYPE: "https://jfrog.com/evidence/build-signature/v1"
         run: |
-          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions","build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence-BuildPublish"}' > ./${{env.EVD_SPEC_JSON}}
-          cat ./${{env.EVD_SPEC_JSON}}
+          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions","build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence-BuildPublish"}' > ${{env.EVD_SPEC_JSON}}
+          cat ${{env.EVD_SPEC_JSON}}
           jf evd create --build-name="${{env.BUILD_NAME}}" --build-number="${{env.BUILD_ID}}" --predicate="${{env.EVD_SPEC_JSON}}" --predicate-type="${{env.PREDICATE_TYPE}}" --key="${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias="${{secrets.EVIDENCE_KEY_ALIAS}}" --project="${{env.PROJECT_KEY}}"
-          # jf evd create --build-name="spring-petclinic" --build-number="cmd.2026-05-04-12-09" --predicate="./evd-spec-bp.json" --predicate-type="https://jfrog.com/evidence/build-signature/v1" --key="$(cat ~/.ssh/jfrog_evd_private.pem)" --key-alias="KRISHNAM_JFROG_EVD_PUBLICKEY" --project="ps-build-promote"
 
 
   metadata_info:
