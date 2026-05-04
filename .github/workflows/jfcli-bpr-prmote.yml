@@ -53,11 +53,11 @@ jobs:
         env:
           EVD_SPEC_JSON: 'dkr-evd-dev-approved-info.json'  # ref https://docs.jfrog.com/governance/docs/evidence-payload
           DATE_TS: $(date +%Y-%m-%d-%H-%M-%S)
+          PREDICATE_TYPE: "https://jfrog.com/evidence/dev-approval/v1"
         run: |
-          echo '{ "actor": "${{github.actor}}", "action": "approved", "date": "${{env.DATE_TS}}", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "comment": "Promotion ${{env.ENV_VAL}} approved by ${{github.actor}} on ${{env.DATE_TS}}"' > ./${{env.EVD_SPEC_JSON}}
+          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions","build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence-BuildPublish"}' > ./${{env.EVD_SPEC_JSON}}
           cat ./${{env.EVD_SPEC_JSON}}
-          jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/approval/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
-
+          jf evd create --build-name="${{env.BUILD_NAME}}" --build-number="${{env.BUILD_ID}}" --predicate="${{env.EVD_SPEC_JSON}}" --predicate-type="${{env.PREDICATE_TYPE}}" --key="${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias="${{secrets.EVIDENCE_KEY_ALIAS}}" --project="${{env.PROJECT_KEY}}"
 
       - name: "Xray - Build scan"
         timeout-minutes: 15   
@@ -106,12 +106,13 @@ jobs:
       - name: "Evidence: Promotion approval ${{env.ENV_VAL}}"
         continue-on-error: true
         env:
-          EVD_SPEC_JSON: 'mvn-evd-dev-approved-info.json'  # ref https://docs.jfrog.com/governance/docs/evidence-payload
+          EVD_SPEC_JSON: 'mdn-evd-dev-approved-info.json'  # ref https://docs.jfrog.com/governance/docs/evidence-payload
           DATE_TS: $(date +%Y-%m-%d-%H-%M-%S)
+          PREDICATE_TYPE: "https://jfrog.com/evidence/dev-approval/v1"
         run: |
-          echo '{ "actor": "${{github.actor}}", "action": "approved", "date": "${{env.DATE_TS}}", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "comment": "Promotion ${{env.ENV_VAL}} approved by ${{github.actor}} on ${{env.DATE_TS}}"' > ./${{env.EVD_SPEC_JSON}}
+          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions","build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence-BuildPublish"}' > ./${{env.EVD_SPEC_JSON}}
           cat ./${{env.EVD_SPEC_JSON}}
-          jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/approval/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
+          jf evd create --build-name="${{env.BUILD_NAME}}" --build-number="${{env.BUILD_ID}}" --predicate="${{env.EVD_SPEC_JSON}}" --predicate-type="${{env.PREDICATE_TYPE}}" --key="${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias="${{secrets.EVIDENCE_KEY_ALIAS}}" --project="${{env.PROJECT_KEY}}"
 
       - name: "Xray - Build scan"
         timeout-minutes: 15   
@@ -160,12 +161,13 @@ jobs:
       - name: "Evidence: Promotion approval ${{env.ENV_VAL}}"
         continue-on-error: true
         env:
-          EVD_SPEC_JSON: 'gdl-evd-dev-approved-info.json' 
+          EVD_SPEC_JSON: 'gdl-evd-dev-approved-info.json'  # ref https://docs.jfrog.com/governance/docs/evidence-payload
           DATE_TS: $(date +%Y-%m-%d-%H-%M-%S)
+          PREDICATE_TYPE: "https://jfrog.com/evidence/dev-approval/v1"
         run: |
-          echo '{ "actor": "${{github.actor}}", "action": "approved", "date": "${{env.DATE_TS}}", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "comment": "Promotion ${{env.ENV_VAL}} approved by ${{github.actor}} on ${{env.DATE_TS}}"' > ./${{env.EVD_SPEC_JSON}}
+          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions","build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence-BuildPublish"}' > ./${{env.EVD_SPEC_JSON}}
           cat ./${{env.EVD_SPEC_JSON}}
-          jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/approval/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
+          jf evd create --build-name="${{env.BUILD_NAME}}" --build-number="${{env.BUILD_ID}}" --predicate="${{env.EVD_SPEC_JSON}}" --predicate-type="${{env.PREDICATE_TYPE}}" --key="${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias="${{secrets.EVIDENCE_KEY_ALIAS}}" --project="${{env.PROJECT_KEY}}"
 
       - name: "Xray - Build scan"
         timeout-minutes: 15   
@@ -217,10 +219,11 @@ jobs:
         env:
           EVD_SPEC_JSON: 'dkr-evd-qa-approved-info.json'  # ref https://docs.jfrog.com/governance/docs/evidence-payload
           DATE_TS: $(date +%Y-%m-%d-%H-%M-%S)
+          PREDICATE_TYPE: "https://jfrog.com/evidence/qa-approval/v1"
         run: |
-          echo '{ "actor": "${{github.actor}}", "action": "approved", "date": "${{env.DATE_TS}}", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "comment": "Promotion ${{env.ENV_VAL}} approved by ${{github.actor}} on ${{env.DATE_TS}}"' > ./${{env.EVD_SPEC_JSON}}
+          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions","build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence-BuildPublish"}' > ./${{env.EVD_SPEC_JSON}}
           cat ./${{env.EVD_SPEC_JSON}}
-          jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/approval/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
+          jf evd create --build-name="${{env.BUILD_NAME}}" --build-number="${{env.BUILD_ID}}" --predicate="${{env.EVD_SPEC_JSON}}" --predicate-type="${{env.PREDICATE_TYPE}}" --key="${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias="${{secrets.EVIDENCE_KEY_ALIAS}}" --project="${{env.PROJECT_KEY}}"
 
       - name: "Xray - Build scan"
         timeout-minutes: 15   
@@ -272,10 +275,11 @@ jobs:
         env:
           EVD_SPEC_JSON: 'mvn-evd-qa-approved-info.json'  # ref https://docs.jfrog.com/governance/docs/evidence-payload
           DATE_TS: $(date +%Y-%m-%d-%H-%M-%S)
+          PREDICATE_TYPE: "https://jfrog.com/evidence/qa-approval/v1"
         run: |
-          echo '{ "actor": "${{github.actor}}", "action": "approved", "date": "${{env.DATE_TS}}", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "comment": "Promotion ${{env.ENV_VAL}} approved by ${{github.actor}} on ${{env.DATE_TS}}"' > ./${{env.EVD_SPEC_JSON}}
+          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions","build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence-BuildPublish"}' > ./${{env.EVD_SPEC_JSON}}
           cat ./${{env.EVD_SPEC_JSON}}
-          jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/approval/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
+          jf evd create --build-name="${{env.BUILD_NAME}}" --build-number="${{env.BUILD_ID}}" --predicate="${{env.EVD_SPEC_JSON}}" --predicate-type="${{env.PREDICATE_TYPE}}" --key="${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias="${{secrets.EVIDENCE_KEY_ALIAS}}" --project="${{env.PROJECT_KEY}}"
 
       - name: "Xray - Build scan"
         timeout-minutes: 15   
@@ -327,10 +331,11 @@ jobs:
         env:
           EVD_SPEC_JSON: 'gdl-evd-qa-approved-info.json'  # ref https://docs.jfrog.com/governance/docs/evidence-payload
           DATE_TS: $(date +%Y-%m-%d-%H-%M-%S)
+          PREDICATE_TYPE: "https://jfrog.com/evidence/qa-approval/v1"
         run: |
-          echo '{ "actor": "${{github.actor}}", "action": "approved", "date": "${{env.DATE_TS}}", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "comment": "Promotion ${{env.ENV_VAL}} approved by ${{github.actor}} on ${{env.DATE_TS}}"' > ./${{env.EVD_SPEC_JSON}}
+          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions","build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence-BuildPublish"}' > ./${{env.EVD_SPEC_JSON}}
           cat ./${{env.EVD_SPEC_JSON}}
-          jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/approval/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
+          jf evd create --build-name="${{env.BUILD_NAME}}" --build-number="${{env.BUILD_ID}}" --predicate="${{env.EVD_SPEC_JSON}}" --predicate-type="${{env.PREDICATE_TYPE}}" --key="${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias="${{secrets.EVIDENCE_KEY_ALIAS}}" --project="${{env.PROJECT_KEY}}"
 
       - name: "Xray - Build scan"
         timeout-minutes: 15   
@@ -382,10 +387,11 @@ jobs:
         env:
           EVD_SPEC_JSON: 'dkr-evd-prod-approved-info.json'  # ref https://docs.jfrog.com/governance/docs/evidence-payload
           DATE_TS: $(date +%Y-%m-%d-%H-%M-%S)
+          PREDICATE_TYPE: "https://jfrog.com/evidence/prod-approval/v1"
         run: |
-          echo '{ "actor": "${{github.actor}}", "action": "approved", "date": "${{env.DATE_TS}}", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "comment": "Promotion ${{env.ENV_VAL}} approved by ${{github.actor}} on ${{env.DATE_TS}}"' > ./${{env.EVD_SPEC_JSON}}
+          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions","build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence-BuildPublish"}' > ./${{env.EVD_SPEC_JSON}}
           cat ./${{env.EVD_SPEC_JSON}}
-          jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/approval/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
+          jf evd create --build-name="${{env.BUILD_NAME}}" --build-number="${{env.BUILD_ID}}" --predicate="${{env.EVD_SPEC_JSON}}" --predicate-type="${{env.PREDICATE_TYPE}}" --key="${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias="${{secrets.EVIDENCE_KEY_ALIAS}}" --project="${{env.PROJECT_KEY}}"
 
       - name: "Xray - Build scan"
         timeout-minutes: 15   
@@ -437,10 +443,11 @@ jobs:
         env:
           EVD_SPEC_JSON: 'mvn-evd-prod-approved-info.json'  # ref https://docs.jfrog.com/governance/docs/evidence-payload
           DATE_TS: $(date +%Y-%m-%d-%H-%M-%S)
+          PREDICATE_TYPE: "https://jfrog.com/evidence/prod-approval/v1"
         run: |
-          echo '{ "actor": "${{github.actor}}", "action": "approved", "date": "${{env.DATE_TS}}", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "comment": "Promotion ${{env.ENV_VAL}} approved by ${{github.actor}} on ${{env.DATE_TS}}"' > ./${{env.EVD_SPEC_JSON}}
+          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions","build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence-BuildPublish"}' > ./${{env.EVD_SPEC_JSON}}
           cat ./${{env.EVD_SPEC_JSON}}
-          jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/approval/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
+          jf evd create --build-name="${{env.BUILD_NAME}}" --build-number="${{env.BUILD_ID}}" --predicate="${{env.EVD_SPEC_JSON}}" --predicate-type="${{env.PREDICATE_TYPE}}" --key="${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias="${{secrets.EVIDENCE_KEY_ALIAS}}" --project="${{env.PROJECT_KEY}}"
 
       - name: "Xray - Build scan"
         timeout-minutes: 15   
@@ -492,10 +499,11 @@ jobs:
         env:
           EVD_SPEC_JSON: 'gdl-evd-prod-approved-info.json'  # ref https://docs.jfrog.com/governance/docs/evidence-payload
           DATE_TS: $(date +%Y-%m-%d-%H-%M-%S)
+          PREDICATE_TYPE: "https://jfrog.com/evidence/prod-approval/v1"
         run: |
-          echo '{ "actor": "${{github.actor}}", "action": "approved", "date": "${{env.DATE_TS}}", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "comment": "Promotion ${{env.ENV_VAL}} approved by ${{github.actor}} on ${{env.DATE_TS}}"' > ./${{env.EVD_SPEC_JSON}}
+          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions","build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence-BuildPublish"}' > ./${{env.EVD_SPEC_JSON}}
           cat ./${{env.EVD_SPEC_JSON}}
-          jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/approval/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
+          jf evd create --build-name="${{env.BUILD_NAME}}" --build-number="${{env.BUILD_ID}}" --predicate="${{env.EVD_SPEC_JSON}}" --predicate-type="${{env.PREDICATE_TYPE}}" --key="${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias="${{secrets.EVIDENCE_KEY_ALIAS}}" --project="${{env.PROJECT_KEY}}"
 
       - name: "Xray - Build scan"
         timeout-minutes: 15   
