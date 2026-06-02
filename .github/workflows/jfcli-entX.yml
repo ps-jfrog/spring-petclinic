@@ -1,4 +1,4 @@
-name: "BPR: Package"
+name: "EntX: Build Package"
 on: push
 permissions:
   actions: read # for detecting the Github Actions environment.
@@ -9,7 +9,8 @@ permissions:
   attestations: write
   artifact-metadata: write
 env:
-  JF_RT_URL: "https://${{vars.JF_NAME}}.jfrog.io"
+  # JF_RT_URL: "https://${{vars.JF_NAME}}.jfrog.io"
+  JF_RT_URL: "https://psentx.jfrog.io"
   BUILD_NAME: "spring-petclinic" # spring-petclinic-3.5.0-SNAPSHOT.jar
   PROJECT_KEY: "ps-build-promote"
   JOB_SUMMARY: false
@@ -657,6 +658,7 @@ jobs:
           echo '{ "actor": "${{github.actor}}", "pipeline": "github actions","build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence-BuildPublish"}' > ${{env.EVD_SPEC_JSON}}
           cat ${{env.EVD_SPEC_JSON}}
           jf evd create --build-name="${{env.BUILD_NAME}}" --build-number="${{env.BUILD_ID}}" --predicate="${{env.EVD_SPEC_JSON}}" --predicate-type="${{env.PREDICATE_TYPE}}" --key="${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias="${{secrets.EVIDENCE_KEY_ALIAS}}" --project="${{env.PROJECT_KEY}}"
+
 
   metadata_info:
     name: "Metadata Job Info"
