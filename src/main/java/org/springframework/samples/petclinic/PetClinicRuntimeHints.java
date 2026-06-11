@@ -30,9 +30,9 @@ public class PetClinicRuntimeHints implements RuntimeHintsRegistrar {
 		hints.resources().registerPattern("db/*/*"); // nested db/{h2,mysql,postgres}
 		hints.resources().registerPattern("messages/*");
 		hints.resources().registerPattern("mysql-default-conf");
-		hints.serialization().registerType(BaseEntity.class);
-		hints.serialization().registerType(Person.class);
-		hints.serialization().registerType(Vet.class);
+		hints.reflection().registerType(BaseEntity.class, typeHint -> typeHint.withJavaSerialization(true));
+		hints.reflection().registerType(Person.class, typeHint -> typeHint.withJavaSerialization(true));
+		hints.reflection().registerType(Vet.class, typeHint -> typeHint.withJavaSerialization(true));
 	}
 
 }
