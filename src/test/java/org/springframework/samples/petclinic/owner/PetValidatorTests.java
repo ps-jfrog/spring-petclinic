@@ -63,6 +63,16 @@ class PetValidatorTests {
 	}
 
 	@Test
+	void supportsPetClass() {
+		assertTrue(petValidator.supports(Pet.class));
+	}
+
+	@Test
+	void doesNotSupportNonPetClass() {
+		assertFalse(petValidator.supports(String.class));
+	}
+
+	@Test
 	void validate() {
 		petType.setName(petTypeName);
 		pet.setName(petName);
