@@ -46,3 +46,6 @@ _site/
 *.css
 !petclinic.css
 .jfrog/*
+.cursor/*
+.vscode/*
+.mvn/*
