@@ -22,30 +22,40 @@ jf rt bce ${BUILD_NAME} ${BUILD_ID} --project="${PROJECT_KEY}"
 jf rt bp ${BUILD_NAME} ${BUILD_ID} --project="${PROJECT_KEY}"
 
 # ref: https://docs.jfrog.com/artifactory/docs/generic-files#setting-file-properties
+# jf rt sp "org=ps;team=arch" --build="spring-petclinic/cmd.2026-07-13-13-48" --project="ps-build-promote"
 jf rt sp "org=ps;team=arch;buildinfo;ts=ts-${BUILD_ID}" --build="${BUILD_NAME}/${BUILD_ID}" --project="${PROJECT_KEY}"
 
-# echo "\n*** Build Promote: SNAPSHOT to DEV\n"
-# jf rt bpr ${BUILD_NAME} ${BUILD_ID} ${RT_REPO_LOCAL_DEV} --status="Promoting build SNAPSHOT to DEV" --project="${PROJECT_KEY}"
-# jf rt sp "env=DEV;" --build="${BUILD_NAME}/${BUILD_ID}" --project="${PROJECT_KEY}"
+echo "\n*** Build Promote: SNAPSHOT to DEV\n"
+jf rt bpr ${BUILD_NAME} ${BUILD_ID} ${RT_REPO_LOCAL_DEV} --status="Promoting build SNAPSHOT to DEV" --project="${PROJECT_KEY}"
+jf rt sp "env=DEV;" --build="${BUILD_NAME}/${BUILD_ID}" --project="${PROJECT_KEY}"
 
-# echo "\n*** Build Promote: DEV to QA\n"
-# jf rt bpr ${BUILD_NAME} ${BUILD_ID} ${RT_REPO_LOCAL_QA} --status="Promoting build DEV to QA" --project="${PROJECT_KEY}"
-# jf rt sp "env=QA;" --build="${BUILD_NAME}/${BUILD_ID}" --project="${PROJECT_KEY}"
-
-
-# echo "\n*** Build Promote: QA to Production\n"
-# jf rt bpr ${BUILD_NAME} ${BUILD_ID} ${RT_REPO_LOCAL_PROD} --status="Promoting build QA to Production" --project="${PROJECT_KEY}"
-# jf rt sp "env=PROD;" --build="${BUILD_NAME}/${BUILD_ID}" --project="${PROJECT_KEY}"
+echo "\n*** Build Promote: DEV to QA\n"
+jf rt bpr ${BUILD_NAME} ${BUILD_ID} ${RT_REPO_LOCAL_QA} --status="Promoting build DEV to QA" --project="${PROJECT_KEY}"
+jf rt sp "env=QA;" --build="${BUILD_NAME}/${BUILD_ID}" --project="${PROJECT_KEY}"
 
 
-# echo "\n *** RBv2: Create Release Bundle v2 and Distrubte to EDGE \n"
+echo "\n*** Build Promote: QA to Production\n"
+jf rt bpr ${BUILD_NAME} ${BUILD_ID} ${RT_REPO_LOCAL_PROD} --status="Promoting build QA to Production" --project="${PROJECT_KEY}"
+jf rt sp "env=PROD;" --build="${BUILD_NAME}/${BUILD_ID}" --project="${PROJECT_KEY}"
+
+
+echo "\n *** RLM: Create RBv2 and Distribute to SaaS Edge \n"
 export RBv2_SPEC_JSON="rbv2-spec-info.json" RBv2_SIGNING_KEY="krishnam"
-# echo "{ \"files\": [ {\"build\": \"${BUILD_NAME}/${BUILD_ID}\", \"includeDeps\":\"true\"} ] }"  > ${RBv2_SPEC_JSON}
-# jf rbc ${BUILD_NAME} ${BUILD_ID} --sync=true --signing-key=${RBV2_SIGNING_KEY} --spec=${RBv2_SPEC_JSON}
+export RBv2_BUNDLE_NAME="rbv2-${BUILD_NAME}"
+echo "{ \"files\": [ {\"build\": \"${BUILD_NAME}/${BUILD_ID}\", \"includeDeps\":\"true\", \"project\":\"${PROJECT_KEY}\"} ] }"  > ${RBv2_SPEC_JSON}
+cat ${RBv2_SPEC_JSON}
+# ref: https://docs.jfrog.com/governance/docs/release-lifecycle-management-cli#create-a-release-bundle-v2
+jf rbc ${RBv2_BUNDLE_NAME} ${BUILD_ID} --sync=true --signing-key=${RBV2_SIGNING_KEY} --spec=${RBv2_SPEC_JSON} --project=${PROJECT_KEY}
 
+# ref: https://docs.jfrog.com/governance/docs/release-lifecycle-management-cli#distribute-a-release-bundle-v2
+jf rbd ${RBv2_BUNDLE_NAME} ${BUILD_ID} --sync=true --create-repo=true --project=${PROJECT_KEY} --site
+
+# echo "\n*** Download RBv2 from SaaS Edge\n"
+# jf rt dl --bundle ${{env.BUILD_NAME}}/${{env.BUILD_ID}} --detailed-summary=true --threads=100
 
 
 sleep 2
 rm -rf ${RBv2_SPEC_JSON}
 
+echo "\n Build Name: ${BUILD_NAME}   Build ID: ${BUILD_ID}  RBv2_BUNDLE_NAME: ${RBv2_BUNDLE_NAME} \n"
 jf -v
