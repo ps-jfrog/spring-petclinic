@@ -27,12 +27,35 @@ env:
   DEFAULT_WORKSPACE: "${{github.workspace}}"  # /home/runner/work/spring-petclinic/spring-petclinic
 
 jobs:
+  resolvePackageRun:
+    name: "Resolve BPR: Package run number"
+    runs-on: ubuntu-latest
+    outputs:
+      package_run_number: ${{ steps.pkg.outputs.package_run_number }}
+    steps:
+      - name: Resolve BPR Package run number
+        id: pkg
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [[ "${{ github.event.workflow_run.name }}" == "BPR: Package" ]]; then
+            N="${{ github.event.workflow_run.run_number }}"
+          else
+            SHA='${{ github.event.workflow_run.head_sha }}'
+            N=$(gh api "repos/${{ github.repository }}/actions/workflows/jfcli-bpr.yml/runs?head_sha=${SHA}&per_page=20" \
+              --jq '(.workflow_runs | map(select(.name=="BPR: Package")) | sort_by(.created_at) | reverse | .[0].run_number // empty)')
+            [[ -n "$N" ]] || { echo "::error::Could not resolve BPR: Package run_number for sha=${SHA}"; exit 1; }
+          fi
+          echo "package_run_number=${N}" >> "$GITHUB_OUTPUT"
+          echo "Resolved BPR: Package run_number=${N} (trigger=${{ github.event.workflow_run.name }})"
+
   dockerRBDistribution:
     name: "Docker: RB Distribution"
+    needs: resolvePackageRun
     runs-on: ubuntu-latest
     env:
-      BUILD_ID: "bpr-dkr-${{github.event.workflow_run.run_number}}"
-      RBV2_BUNDLE_ID: "dkr-${{github.event.workflow_run.run_number}}"
+      BUILD_ID: "bpr-dkr-${{ needs.resolvePackageRun.outputs.package_run_number }}"
+      RBV2_BUNDLE_ID: "dkr-${{ needs.resolvePackageRun.outputs.package_run_number }}"
       RBv2_SPEC_JSON: "rbv2-spec-info.json"
     defaults:
        run:
@@ -139,10 +162,11 @@ jobs:
 
   mvnRBDistribution:
     name: "MVN: RB Distribution"
+    needs: resolvePackageRun
     runs-on: ubuntu-latest
     env:
-      BUILD_ID: "bpr-mvn-${{github.event.workflow_run.run_number}}"
-      RBV2_BUNDLE_ID: "mvn-${{github.event.workflow_run.run_number}}"
+      BUILD_ID: "bpr-mvn-${{ needs.resolvePackageRun.outputs.package_run_number }}"
+      RBV2_BUNDLE_ID: "mvn-${{ needs.resolvePackageRun.outputs.package_run_number }}"
       RBv2_SPEC_JSON: "rbv2-spec-info.json"
     defaults:
        run:
