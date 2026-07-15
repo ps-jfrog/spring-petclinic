@@ -2,7 +2,7 @@ name: "BPR: RB Distribution"
 on: 
   workflow_run:
     workflows: 
-      - "BPR: Package"
+      # - "BPR: Package"
       - "BPR: Promote"
     types: [completed]
 permissions:
