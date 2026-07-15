@@ -1,4 +1,4 @@
-name: "AppTrust: RLM - RBv2"
+name: "AppTrust: Package"
 on: push
 permissions:
   actions: read # for detecting the Github Actions environment.
@@ -7,6 +7,7 @@ permissions:
   contents: read
   security-events: write # Required for uploading code scanning.
   attestations: write
+  artifact-metadata: write
 env:
   JF_RT_URL: "https://${{vars.JF_NAME}}.jfrog.io"
   BUILD_NAME: "spring-petclinic" # spring-petclinic-3.5.0-SNAPSHOT.jar
@@ -15,18 +16,15 @@ env:
   CLI_LOG_LEVEL: DEBUG # DEBUG, INFO, WARN, ERROR
   JAVA_DISTRIBUTION: 'temurin'
   JAVA_VERSION: '25'
-  EVD_SPEC_JSON: 'evd-spec-info.json'  # ref https://jfrog.com/help/r/jfrog-artifactory-documentation/evidence-setup
-  RBv2_SPEC_JSON: "rbv2-spec-info.json"
   #RBV2_SIGNING_KEY: "${{secrets.RBV2_SIGNING_KEY}}" # ref https://jfrog.com/help/r/jfrog-artifactory-documentation/create-signing-keys-for-release-bundles-v2
   DEFAULT_WORKSPACE: "${{github.workspace}}"  # /home/runner/work/spring-petclinic/spring-petclinic
-  JUNIT_TEST_RESULTS_JSON: "./target/surefire-reports/test-results.json"
-  JUNIT_TEST_RESULTS_CONVERSION_SCRIPT: "./jfrog/convertXml2Json.sh"
+
 jobs:
   dockerPackage:
-    name: "Docker: Package"
+    name: "Docker Package"
     env:  
-      BUILD_ID: "rbv2-dkr-${{github.run_number}}"
-      RT_REPO_VIRTUAL: "rbv2-spring-petclinic-docker-virtual"
+      BUILD_ID: "dkr-${{github.run_number}}"
+      RT_REPO_VIRTUAL: "apptrust-docker-virtual"
       RT_REPO_LOCAL_DEFAULT: "rbv2-spring-petclinic-docker-init-local"
       RT_REPO_LOCAL_DEV: "rbv2-spring-petclinic-docker-dev-local"
       RT_REPO_LOCAL_QA: "rbv2-spring-petclinic-docker-qa-local"
@@ -41,15 +39,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30   # ref  https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#jobsjob_idtimeout-minutes
     steps:
-      - name: "Install prereqs tools"
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y jq yq
-          sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/local/bin/yq
-          sudo chmod +x /usr/local/bin/yq 
-          yq --version
-          jq --version
-
       # Use the specific setup-cli branch. Ref https://github.com/marketplace/actions/setup-jfrog-cli
       - name: "Setup JFrog CLI"
         uses: jfrog/setup-jfrog-cli@v5
@@ -91,8 +80,6 @@ jobs:
           docker -v
           # jf config
           jf config show
-          rm -rf build.gradle 
-          rm -rf **/*.gradle 
 
       - name: "Config jf with mvn repos"
         run: |
@@ -123,7 +110,7 @@ jobs:
         uses: docker/setup-buildx-action@v4   # ref: https://github.com/marketplace/actions/docker-setup-buildx h
         with:
           use: true
-          # Multi-platform images require the docker-container driver (or containerd image store); the default docker driver cannot push multi-arch manifests.
+          # Multi-platform requires docker-container driver (or containerd image store); plain docker driver cannot push multi-arch.
           driver: docker-container
           platforms: ${{env.DOCKER_BUILDX_PLATFORMS}} # linux/amd64,linux/arm64 # ref: https://docs.docker.com/reference/cli/docker/buildx/create/#platform
 
@@ -153,18 +140,20 @@ jobs:
         timeout-minutes: 15    # ref https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#jobsjob_idstepstimeout-minutes
         continue-on-error: true    # ref: https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#jobsjob_idstepscontinue-on-error
         run: |
+          rm -rf build.gradle 
           jf ca --format=table --threads=100 --image=psazuse.jfrog.io/springpetclinic-docker-virtual/amazoncorretto:25-alpine-jdk
 
       - name: "Curation-Audit: MVN" 
         timeout-minutes: 15   
         continue-on-error: true   
         run: |
+          rm -rf build.gradle 
           jf ca --format=table --threads=100 
 
       - name: "Xray & JAS: Audit"  # https://docs.jfrog-applications.jfrog.io/jfrog-applications/jfrog-cli/cli-for-jfrog-security
         # scan for Xray: Source code dependencies and JAS: Secrets Detection, IaC, Vulnerabilities Contextual Analysis 'SAST'
         timeout-minutes: 15  # ref: https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#jobsjob_idstepstimeout-minutes
-        # continue-on-error: true    # ref: https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#jobsjob_idstepscontinue-on-error
+        continue-on-error: true    # ref: https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#jobsjob_idstepscontinue-on-error
         run: |
           jf audit --mvn --sast=true --sca=true --secrets=true --licenses=true --validate-secrets=true --vuln=true --format=table --extended-table=true --threads=100 --fail=false --project="${{env.PROJECT_KEY}}"
 
@@ -177,10 +166,11 @@ jobs:
         timeout-minutes: 15  # ref: https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#jobsjob_idstepstimeout-minutes
         continue-on-error: true    # ref: https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#jobsjob_idstepscontinue-on-error
         run: |
-          jf scan . --format=table --extended-table=true --threads=100 --fail=false --project="${{env.PROJECT_KEY}}"
+          jf scan . --format=table --extended-table=true --threads=100 --fail=false --vuln=true --project="${{env.PROJECT_KEY}}" 
 
       - name: "Package: Docker build and push"
         env:
+          DOCKER_FILE: "./jfrog/Dockerfile"
           JAR_FILE: "./target/${{env.ARTIFACT_NAME}}-${{env.ARTIFACT_VERSION}}.jar"
           TAG10: "${{vars.JF_NAME}}.jfrog.io/${{env.RT_REPO_VIRTUAL}}/${{env.ARTIFACT_NAME}}:${{env.ARTIFACT_VERSION}}"
           TAG11: "${{vars.JF_NAME}}.jfrog.io/${{env.RT_REPO_VIRTUAL}}/${{env.ARTIFACT_NAME}}:${{env.SHORT_COMMIT_CODE}}"
@@ -188,7 +178,7 @@ jobs:
           TAG13: "${{vars.JF_NAME}}.jfrog.io/${{env.RT_REPO_VIRTUAL}}/${{env.ARTIFACT_NAME}}:${{env.BUILD_ID}}"
           TAG14: "${{vars.JF_NAME}}.jfrog.io/${{env.RT_REPO_VIRTUAL}}/${{env.ARTIFACT_NAME}}:latest"
         run: |
-          docker buildx build -f ./jfrog/Dockerfile --build-arg JAR_FILE=${{env.JAR_FILE}} --platform "${{env.DOCKER_BUILDX_PLATFORMS}}" --metadata-file "${{env.DOCKER_METADATA_JSON}}" --push -t ${{env.TAG10}} -t ${{env.TAG11}} -t ${{env.TAG12}} -t ${{env.TAG13}} -t ${{env.TAG14}} .
+          docker buildx build -f ${{env.DOCKER_FILE}} --build-arg JAR_FILE=${{env.JAR_FILE}} --platform "${{env.DOCKER_BUILDX_PLATFORMS}}" --metadata-file "${{env.DOCKER_METADATA_JSON}}" --push -t ${{env.TAG10}} -t ${{env.TAG11}} -t ${{env.TAG12}} -t ${{env.TAG13}} -t ${{env.TAG14}} .
 
       - name: "Optional: Docker pull image"
         run: |
@@ -202,11 +192,14 @@ jobs:
       #     Docs# https://jfrog.com/help/r/jfrog-artifactory-documentation/evidence-management
       #     CLI# https://docs.jfrog-applications.jfrog.io/jfrog-applications/jfrog-cli/binaries-management-with-jfrog-artifactory/evidence-service
       - name: "Evidence: Package"
-        # continue-on-error: true 
+        continue-on-error: true 
+        env:
+          EVD_SPEC_JSON: './dkr-evd-package-spec-info.json'  # ref https://jfrog.com/help/r/jfrog-artifactory-documentation/evidence-setup
+          PREDICATE_TYPE: "https://jfrog.com/evidence/signature/v1"
         run: |
-          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions","build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd":"Evidence-Package", "package":"${{env.RT_REPO_DOCKER_URL}}" }' > ./${{env.EVD_SPEC_JSON}}
-          cat ./${{env.EVD_SPEC_JSON}}
-          jf evd create --package-name ${{env.BUILD_NAME}} --package-version ${{env.BUILD_ID}} --package-repo-name ${{env.RT_REPO_VIRTUAL}} --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}"  --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/signature/v1 --project="${{env.PROJECT_KEY}}"
+          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions","build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd":"Evidence-Package", "package":"${{env.RT_REPO_DOCKER_URL}}" }' > ${{env.EVD_SPEC_JSON}}
+          cat ${{env.EVD_SPEC_JSON}}
+          jf evd create --package-name="${{env.BUILD_NAME}}" --package-version="${{env.BUILD_ID}}" --package-repo-name="${{env.RT_REPO_VIRTUAL}}" --key="${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}"  --key-alias="${{secrets.EVIDENCE_KEY_ALIAS}}" --predicate="${{env.EVD_SPEC_JSON}}" --predicate-type="${{env.PREDICATE_TYPE}}" --project="${{env.PROJECT_KEY}}"
 
       - name: "Package: Xray - docker Artifact scan"
         timeout-minutes: 15    # ref https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#jobsjob_idstepstimeout-minutes
@@ -230,16 +223,6 @@ jobs:
           #    Centers for Medicare & Medicaid Services: https://security.cms.gov/learn/software-bill-materials-sbom
           # India
           #    CERT-IN: https://www.cert-in.org.in/sbom/
-      - name: "BuildInfo: Collect env"
-        run: jf rt bce ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --project="${{env.PROJECT_KEY}}"
-
-      - name: "BuildInfo: Adds dependencies"
-        continue-on-error: true
-        run: jf rt bad ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --project="${{env.PROJECT_KEY}}"
-
-      - name: "BuildInfo: Add VCS info"
-        run: jf rt bag ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --project="${{env.PROJECT_KEY}}" 
-
       - name: "BuildInfo: Docker build create"
         run: |
           imageDigest=$(cat "${{env.DOCKER_METADATA_JSON}}" | jq '.["containerimage.digest"]')
@@ -252,21 +235,28 @@ jobs:
           jf rt bdc ${{env.RT_REPO_VIRTUAL}} --image-file ${{env.DOCKER_METADATA_JSON}} --build-name=${{env.BUILD_NAME}} --build-number=${{env.BUILD_ID}} --project="${{env.PROJECT_KEY}}"
 
       - name: "BuildInfo: Build Publish"
-        run: jf rt bp ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --detailed-summary=true --project="${{env.PROJECT_KEY}}"
+        run: |
+          jf rt bce ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --project="${{env.PROJECT_KEY}}"
+          # jf rt bad ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --project="${{env.PROJECT_KEY}}"
+          jf rt bag ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --project="${{env.PROJECT_KEY}}" 
+          jf rt bp ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --project="${{env.PROJECT_KEY}}" --detailed-summary=true 
 
       # Evidence - Build references
       #     Docs# https://jfrog.com/help/r/jfrog-artifactory-documentation/evidence-management
       #     CLI# https://docs.jfrog-applications.jfrog.io/jfrog-applications/jfrog-cli/binaries-management-with-jfrog-artifactory/evidence-service
       - name: "Evidence: Build Publish"
-        # continue-on-error: true 
+        continue-on-error: true 
+        env:
+          EVD_SPEC_JSON: './dkr-evd-bp-spec-info.json'  # ref https://jfrog.com/help/r/jfrog-artifactory-documentation/evidence-setup
+          PREDICATE_TYPE: "https://jfrog.com/evidence/build-signature/v1"
         run: |
-          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions","build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence-BuildPublish"}' > ./${{env.EVD_SPEC_JSON}}
-          cat ./${{env.EVD_SPEC_JSON}}
-          jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/signature/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
-          #echo "    - Evidence for BUILD Publish attached. " >> $GITHUB_STEP_SUMMARY
+          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions","build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence-BuildPublish"}' > ${{env.EVD_SPEC_JSON}}
+          cat ${{env.EVD_SPEC_JSON}}
+          jf evd create --build-name="${{env.BUILD_NAME}}" --build-number="${{env.BUILD_ID}}" --predicate="${{env.EVD_SPEC_JSON}}" --predicate-type="${{env.PREDICATE_TYPE}}" --key="${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias="${{secrets.EVIDENCE_KEY_ALIAS}}" --project="${{env.PROJECT_KEY}}"
 
       # curl -L 'https://psazuse.jfrog.io/xray/api/v1/binMgr/builds' -H 'Content-Type: application/json' -H 'Authorization: ••••••' -d '{  "names": ["spring-petclinic"] }'
       - name: "Optional: Add Builds to Indexing Configuration"
+        continue-on-error: true 
         run: |
           jf xr curl "/api/v1/binMgr/builds" -H 'Content-Type: application/json' -d '{"names": ["${{env.BUILD_NAME}}"] }'
       # Set properties      
@@ -282,13 +272,13 @@ jobs:
            jf rt curl "/api/build/${{env.BUILD_NAME}}/${{env.BUILD_ID}}" -o $BUILD_INFO_JSON
            cat $BUILD_INFO_JSON
 
-      - name: "Sleep for few seconds"
-        env: 
-          SLEEP_TIME: 30
-        run: |
-           echo "Sleeping for ${{env.SLEEP_TIME}} seconds..."
-           sleep ${{env.SLEEP_TIME}}  # Sleeping for 20 seconds before executing the build publish seems to have resolved the build-scan issue. This delay might be helping with synchronization or resource availability, ensuring a smooth build process.
-           echo "Awake now!"
+      # - name: "Sleep for few seconds"
+      #   env: 
+      #     SLEEP_TIME: 20
+      #   run: |
+      #      echo "Sleeping for ${{env.SLEEP_TIME}} seconds..."
+      #      sleep ${{env.SLEEP_TIME}}  # Sleeping for 20 seconds before executing the build publish seems to have resolved the build-scan issue. This delay might be helping with synchronization or resource availability, ensuring a smooth build process.
+      #      echo "Awake now!"
 
       - name: "Optional: Query - Build Scan status"
         run: |
@@ -298,6 +288,7 @@ jobs:
       # MVN plugin '<artifactId>cyclonedx-maven-plugin</artifactId>' is used to generate SBOM information in the CycloneDX format# target/classes/META-INF/sbom/application.cdx.json
       # ref https://spring.io/blog/2024/05/24/sbom-support-in-spring-boot-3-3
       - name: "Optional: Xray sbom-enrich" 
+        continue-on-error: true 
         run: |
           jf se "target/classes/META-INF/sbom/application.cdx.json" --threads=100
 
@@ -309,60 +300,25 @@ jobs:
 
       - name: "Optional: Build Scan V2"  # https://jfrog.com/help/r/xray-rest-apis/scan-build-v2
         # jf xr curl /api/v2/ci/build -H 'Content-Type: application/json' -d '{"build_name": "spring-petclinic", "build_number": "ga-gdl-xray-50","rescan":true }'
+        continue-on-error: true 
         run: |
           jf xr curl /api/v2/ci/build -H 'Content-Type: application/json' -d '{"build_name": "${{env.BUILD_NAME}}", "build_number": "${{env.BUILD_ID}}","rescan":false  }'
 
-      # Release Bundle v2
-      - name: "RLM: RBv2 Create NEW"
-        run: |
-          echo "{ \"files\": [ {\"build\": \"${{env.BUILD_NAME}}/${{env.BUILD_ID}}\", \"includeDeps\":\"true\"} ] }"  > ${{env.RBv2_SPEC_JSON}}
-          cat ${{env.RBv2_SPEC_JSON}}
-          jf rbc ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --sync=true --signing-key=${{secrets.RBV2_SIGNING_KEY}} --spec=${{env.RBv2_SPEC_JSON}} --project="${{env.PROJECT_KEY}}"
-
-      - name: "RLM: Xray Indexing"
-        run: |
-            jf xr curl "/api/v1/binMgr/release_bundle_v2" -H 'Content-Type: application/json' -d "{\"names\": [\"${{env.BUILD_NAME}}\"] }"
-
-      # Evidence - RBv2 new references
-      #     Docs# https://jfrog.com/help/r/jfrog-artifactory-documentation/evidence-management
-      #     CLI# https://docs.jfrog-applications.jfrog.io/jfrog-applications/jfrog-cli/binaries-management-with-jfrog-artifactory/evidence-service
-      - name: "Evidence: RBv2 state NEW"
-        # continue-on-error: true 
-        env:
-          # https://psazuse.jfrog.io/ui/artifactory/lifecycle/?bundleName=spring-petclinic&bundleToFlash=spring-petclinic&repositoryKey=release-bundles-v2&activeKanbanTab=promotion
-          NAME_LINK: "${{env.JF_RT_URL}}/ui/artifactory/lifecycle/?bundleName=${{env.BUILD_NAME}}&bundleToFlash=${{env.BUILD_NAME}}&repositoryKey=release-bundles-v2&activeKanbanTab=promotion"
-          VER_LINK: "${{env.JF_RT_URL}}/ui/artifactory/lifecycle/?bundleName='${{env.BUILD_NAME}}'&bundleToFlash='${{env.BUILD_NAME}}'&releaseBundleVersion='${{env.BUILD_ID}}'&repositoryKey=release-bundles-v2&activeVersionTab=Version%20Timeline&activeKanbanTab=promotion"
-        run: |
-          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence-RBv2", "rbv2_stage": "NEW" }' > ./${{env.EVD_SPEC_JSON}}
-          cat ./${{env.EVD_SPEC_JSON}}
-          jf evd create --release-bundle ${{env.BUILD_NAME}} --release-bundle-version ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/promotion/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
-
   mvnPackage:
-    name: "MVN Package"
-    env: 
-      BUILD_ID: "rbv2-mvn-${{github.run_number}}"
+    name: "Maven Package"
+    env:  
+      BUILD_ID: "mvn-${{github.run_number}}"
       RT_REPO_VIRTUAL: "rbv2-spring-petclinic-mvn-virtual"
       RT_REPO_LOCAL_DEFAULT: "rbv2-spring-petclinic-mvn-init-local"
       RT_REPO_LOCAL_DEV: "rbv2-spring-petclinic-mvn-dev-local"
       RT_REPO_LOCAL_QA: "rbv2-spring-petclinic-mvn-qa-local"
       RT_REPO_LOCAL_PROD: "rbv2-spring-petclinic-mvn-prod-local"
       # RT_REPO_REMOTE: rbv2-spring-petclinic-mvn-remote
-
-    runs-on: ubuntu-latest
-    timeout-minutes: 30   # ref  https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#jobsjob_idtimeout-minutes
     defaults:
        run:
          working-directory: "${{env.DEFAULT_WORKSPACE}}"
+    runs-on: ubuntu-latest
     steps:
-      - name: "Install prereqs tools"
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y jq yq
-          sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/local/bin/yq
-          sudo chmod +x /usr/local/bin/yq 
-          yq --version
-          jq --version
-
       - name: "Setup JFrog CLI"
         uses: jfrog/setup-jfrog-cli@v5
         id: setup-cli
@@ -403,8 +359,6 @@ jobs:
           docker -v
           # jf config
           jf config show
-          rm -rf build.gradle 
-          rm -rf **/*.gradle 
 
       - name: "Config jf with mvn repos"
         run: |
@@ -415,23 +369,10 @@ jobs:
           rm -rf build.gradle
           pwd
           tree .
-
-      - name: "MVN: Summary"
-        run: |
-          echo "# :frog: MVN: Summary :pushpin:" >> $GITHUB_STEP_SUMMARY
-          echo " " >> $GITHUB_STEP_SUMMARY
-          echo " " >> $GITHUB_STEP_SUMMARY
-          echo " - Installed JFrog CLI [$(jf --version)](https://jfrog.com/getcli/) and Java [${{env.JAVA_PROVIDER}}](https://github.com/actions/setup-java) v${{env.JAVA_VERSION}} " >> $GITHUB_STEP_SUMMARY
-          echo "    - $(jf --version) " >> $GITHUB_STEP_SUMMARY
-          echo "    - $(mvn -v) " >> $GITHUB_STEP_SUMMARY
-          echo " - Configured the JFrog Cli and Docker login with SaaS Artifactory OIDC integration  " >> $GITHUB_STEP_SUMMARY
-          echo " " >> $GITHUB_STEP_SUMMARY
-          echo " - Variables info" >> $GITHUB_STEP_SUMMARY
-          echo "    - ID: ${{env.BUILD_ID}} " >> $GITHUB_STEP_SUMMARY
-          echo "    - Build Name: ${{env.BUILD_NAME}} " >> $GITHUB_STEP_SUMMARY
-          echo "    - Project Key: ${{env.PROJECT_KEY}} " >> $GITHUB_STEP_SUMMARY
-          echo "    - Maven Repo URL: ${{env.RT_REPO_VIRTUAL}}" >> $GITHUB_STEP_SUMMARY
-          echo " " >> $GITHUB_STEP_SUMMARY
+          echo "ARTIFACT_NAME=$(mvn help:evaluate -Dexpression=project.artifactId -q -DforceStdout)" >> $GITHUB_ENV
+          echo "ARTIFACT_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)" >> $GITHUB_ENV
+          echo "SHORT_COMMIT_CODE=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          echo "TODAYS_DATE=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
 
       - name: "Curation: audit" 
         timeout-minutes: 15    
@@ -439,7 +380,8 @@ jobs:
         run: |
           jf ca --format=table --threads=100
   
-      - name: "Xray & JAS: Audit"  
+      - name: "Xray & JAS: Audit" 
+        continue-on-error: true  
         timeout-minutes: 15 
         # continue-on-error: true 
         run: |
@@ -469,21 +411,21 @@ jobs:
         timeout-minutes: 15  # ref: https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#jobsjob_idstepstimeout-minutes
         continue-on-error: true    # ref: https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#jobsjob_idstepscontinue-on-error
         run: |
-          jf scan . --format=table --extended-table=true --threads=100 --fail=false --project="${{env.PROJECT_KEY}}"
+          jf scan . --format=table --extended-table=true --threads=100 --fail=false --vuln=true --project="${{env.PROJECT_KEY}}"
+
+      - name: "Package: Xray - final jar scan"
+        timeout-minutes: 15  # ref: https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#jobsjob_idstepstimeout-minutes
+        continue-on-error: true   # jf scan ./target/spring-petclinic-4.0.0-SNAPSHOT.jar --format=table --extended-table=true --threads=100 --vuln=true
+        run: |
+          jf scan ./target/${{env.ARTIFACT_NAME}}-${{env.ARTIFACT_VERSION}}.jar --format=table --extended-table=true --threads=100 --fail=false --vuln=true --project="${{env.PROJECT_KEY}}"
 
       # Build Info
-      - name: "BuildInfo: Collect env"
-        run: jf rt bce ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --project="${{env.PROJECT_KEY}}"
-
-      - name: "BuildInfo: Add Dependencies"
-        continue-on-error: true
-        run: jf rt bad ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --project="${{env.PROJECT_KEY}}"
-      
-      - name: "BuildInfo: Add VCS info"
-        run: jf rt bag ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --project="${{env.PROJECT_KEY}}"
-
       - name: "BuildInfo: Build Publish"
-        run: jf rt bp ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --detailed-summary=true --project="${{env.PROJECT_KEY}}"
+        run: |
+          jf rt bce ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --project="${{env.PROJECT_KEY}}"
+          # jf rt bad ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --project="${{env.PROJECT_KEY}}"
+          jf rt bag ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --project="${{env.PROJECT_KEY}}" 
+          jf rt bp ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --project="${{env.PROJECT_KEY}}" --detailed-summary=true 
       
       - name: "Create artifact digest"
         id: create_artifact_digest
@@ -492,33 +434,40 @@ jobs:
           echo "artifact_digest=$ARTIFACT_DIGEST" >> $GITHUB_OUTPUT
 
       - name: "Evidence: Build Info"
-        # continue-on-error: true 
+        continue-on-error: true 
         env:
-            EVD_JSON: "target/build-info.json"
+          EVD_JSON: "./target/build-info.json"
+          PREDICATE_TYPE: "https://jfrog.com/evidence/signature/v1"
         run: |
-          cat ./${{env.EVD_JSON}}
-          jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_JSON}} --predicate-type https://jfrog.com/evidence/signature/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
+          cat ${{env.EVD_JSON}}
+          jf evd create --build-name="${{env.BUILD_NAME}}" --build-number="${{env.BUILD_ID}}" --predicate="${{env.EVD_JSON}}" --predicate-type="${{env.PREDICATE_TYPE}}"  --key="${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias="${{secrets.EVIDENCE_KEY_ALIAS}}" --project="${{env.PROJECT_KEY}}"
 
       - name: "Evidence: cdx"
         continue-on-error: true 
         env:
-            EVD_JSON: "target/classes/META-INF/sbom/application.cdx.json"      # https://jfrog.com/evidence/signature/v1
+          EVD_JSON: "./target/classes/META-INF/sbom/application.cdx.json"      # https://jfrog.com/evidence/signature/v1
+          PREDICATE_TYPE: "https://cyclonedx.org/bom/v1.4"
         run: |
-          cat ./${{env.EVD_JSON}}
-          jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_JSON}} --predicate-type https://cyclonedx.org/bom/v1.4 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
+          cat ${{env.EVD_JSON}}
+          jf evd create --build-name="${{env.BUILD_NAME}}" --build-number="${{env.BUILD_ID}}" --predicate="${{env.EVD_JSON}}" --predicate-type="${{env.PREDICATE_TYPE}}" --key="${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias="${{secrets.EVIDENCE_KEY_ALIAS}}" --project="${{env.PROJECT_KEY}}"
           
       - name: "Evidence: Junit Tests results"
         continue-on-error: true 
+        env:
+          JUNIT_TEST_RESULTS_JSON: "./target/surefire-reports/test-results.json"
+          PREDICATE_TYPE: "https://jfrog.com/evidence/test-results/v1"
         run: |
-          jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.JUNIT_TEST_RESULTS_JSON}} --predicate-type https://jfrog.com/evidence/test-results/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
+          jf evd create --build-name="${{env.BUILD_NAME}}" --build-number="${{env.BUILD_ID}}" --predicate="${{env.JUNIT_TEST_RESULTS_JSON}}" --predicate-type="${{env.PREDICATE_TYPE}}" --key="${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias="${{secrets.EVIDENCE_KEY_ALIAS}}" --project="${{env.PROJECT_KEY}}"
 
-      # - name: "Evidence: Build Publish"
-      #   # continue-on-error: true 
-      #   run: |
-      #     echo '{ "actor": "${{github.actor}}", "pipeline": "github actions","build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence-BuildPublish"}' > ./${{env.EVD_SPEC_JSON}}
-      #     cat ./${{env.EVD_SPEC_JSON}}
-      #     jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/signature/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}}
-      #     # echo "    - Evidence for BUILD Publish attached. " >> $GITHUB_STEP_SUMMARY
+      - name: "Evidence: Build Publish"
+        continue-on-error: true 
+        env:
+          EVD_SPEC_JSON: './mvn-evd-bp-spec-info.json'  # ref https://jfrog.com/help/r/jfrog-artifactory-documentation/evidence-setup
+          PREDICATE_TYPE: "https://jfrog.com/evidence/build-signature/v1"
+        run: |
+          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions","build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence-BuildPublish"}' > ${{env.EVD_SPEC_JSON}}
+          cat ${{env.EVD_SPEC_JSON}}
+          jf evd create --build-name="${{env.BUILD_NAME}}" --build-number="${{env.BUILD_ID}}" --predicate="${{env.EVD_SPEC_JSON}}" --predicate-type="${{env.PREDICATE_TYPE}}" --key="${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias="${{secrets.EVIDENCE_KEY_ALIAS}}" --project="${{env.PROJECT_KEY}}"
 
       - name: "Optional: Add Builds to Indexing Configuration"
         run: |
@@ -531,19 +480,20 @@ jobs:
            jf rt curl "/api/build/${{env.BUILD_NAME}}/${{env.BUILD_ID}}" -o ${{env.BUILD_INFO_JSON}}
            cat ${{env.BUILD_INFO_JSON}}
 
-      - name: "Sleep for few seconds"
-        env: 
-          SLEEP_TIME: 30
-        run: |
-           echo "Sleeping for ${{env.SLEEP_TIME}} seconds..."
-           sleep ${{env.SLEEP_TIME}}  # Sleeping for 20 seconds before executing the build publish seems to have resolved the build-scan issue. This delay might be helping with synchronization or resource availability, ensuring a smooth build process.
-           echo "Awake now!"
+      # - name: "Sleep for few seconds"
+      #   env: 
+      #     SLEEP_TIME: 30
+      #   run: |
+      #      echo "Sleeping for ${{env.SLEEP_TIME}} seconds..."
+      #      sleep ${{env.SLEEP_TIME}}  # Sleeping for 20 seconds before executing the build publish seems to have resolved the build-scan issue. This delay might be helping with synchronization or resource availability, ensuring a smooth build process.
+      #      echo "Awake now!"
 
       - name: "Optional: Query - Build Scan status"
         run: |
           jf xr curl "/api/v1/build/status" -H 'Content-Type: application/json' -d '{"name": "${{env.BUILD_NAME}}", "number": "${{env.BUILD_ID}}" }'
  
       - name: "Optional: Xray sbom-enrich" 
+        continue-on-error: true 
         run: |
           jf se "target/classes/META-INF/sbom/application.cdx.json" --threads=100
 
@@ -554,35 +504,14 @@ jobs:
           jf bs ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --fail=false --format=table --extended-table=true --vuln=true --project="${{env.PROJECT_KEY}}"
 
       - name: "Optional: Build Scan V2" # https://jfrog.com/help/r/xray-rest-apis/scan-build-v2
+        continue-on-error: true 
         run: |
           jf xr curl /api/v2/ci/build -H 'Content-Type: application/json' -d '{"build_name": "${{env.BUILD_NAME}}", "build_number": "${{env.BUILD_ID}}","rescan":false }'
-
-      # Release Bundle v2
-      - name: "RLM: RBv2 Create NEW"
-        run: |
-          echo "{ \"files\": [ {\"build\": \"${{env.BUILD_NAME}}/${{env.BUILD_ID}}\", \"includeDeps\":\"false\"} ] }"  > ${{env.RBv2_SPEC_JSON}}
-          cat ${{env.RBv2_SPEC_JSON}}
-
-          jf rbc ${{env.BUILD_NAME}} ${{env.BUILD_ID}}" --project="${{env.PROJECT_KEY}}" --signing-key=${{secrets.RBV2_SIGNING_KEY}} --spec=${{env.RBv2_SPEC_JSON}} --sync=true
-
-      - name: "RLM: Xray Indexing"
-        run: |
-            jf xr curl "/api/v1/binMgr/release_bundle_v2" -H 'Content-Type: application/json' -d "{\"names\": [\"${{env.BUILD_NAME}}\"] }"
-
-      - name: "Evidence: RBv2 state NEW"
-        continue-on-error: true 
-        env:
-          VER_LINK: "${{env.JF_RT_URL}}/ui/artifactory/lifecycle/?bundleName='${{env.BUILD_NAME}}'&bundleToFlash='${{env.BUILD_NAME}}'&releaseBundleVersion='${{env.BUILD_ID}}'&repositoryKey=release-bundles-v2&activeVersionTab=Version%20Timeline&activeKanbanTab=promotion"
-        run: |
-          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions", "build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence-RBv2", "rbv2_stage": "NEW" }' > ${{env.EVD_SPEC_JSON}}
-          cat ${{env.EVD_SPEC_JSON}}
-
-          jf evd create --release-bundle ${{env.BUILD_NAME}} --release-bundle-version ${{env.BUILD_ID}} --predicate ./${{env.EVD_SPEC_JSON}} --predicate-type https://jfrog.com/evidence/promotion/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
 
   gradlePackage:
     name: "Gradle Package"
     env:  
-      BUILD_ID: "bpr-gdl-${{github.run_number}}"
+      BUILD_ID: "gdl-${{github.run_number}}"
       RT_REPO_VIRTUAL: "rbv2-spring-petclinic-gradle-virtual"
       RT_REPO_LOCAL_DEFAULT: "rbv2-spring-petclinic-gradle-init-fed"   # federation sites: psazuse, psemea
       RT_REPO_LOCAL_DEV: "rbv2-spring-petclinic-gradle-dev-fed"
@@ -633,8 +562,7 @@ jobs:
           # Gradle
           gradle -v
           # jf config
-          jf config show 
-          rm -rf pom.xml 
+          jf config show
 
       - name: "Config jf with gradle repos"
         # jf gradlec --repo-deploy springpetclinic-gradle-virtual --repo-resolve springpetclinic-gradle-virtual --repo-deploy springpetclinic-gradle-virtual
@@ -668,6 +596,12 @@ jobs:
         run: |
           jf gradle clean artifactoryPublish -x test --build-name=${{env.BUILD_NAME}} --build-number=${{env.BUILD_ID}} --project="${{env.PROJECT_KEY}}"
 
+      - name: "Package: Xray - gradle Artifact scan"
+        timeout-minutes: 15  # ref: https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#jobsjob_idstepstimeout-minutes
+        continue-on-error: true    # ref: https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#jobsjob_idstepscontinue-on-error
+        run: |
+          jf scan . --format=table --extended-table=true --threads=100 --fail=false --vuln=true --project="${{env.PROJECT_KEY}}" 
+
       # Build Info
           # US 
           #     Executive Order: 
@@ -680,14 +614,18 @@ jobs:
           #    Centers for Medicare & Medicaid Services: https://security.cms.gov/learn/software-bill-materials-sbom
           # India
           #    CERT-IN: https://www.cert-in.org.in/sbom/
-      - name: "BuildInfo: Collect env"
-        run: jf rt bce ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --project="${{env.PROJECT_KEY}}"
- 
-      - name: "BuildInfo: Add VCS info"
-        run: jf rt bag ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --project="${{env.PROJECT_KEY}}"
-
       - name: "BuildInfo: Build Publish"
-        run: jf rt bp ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --detailed-summary=true --project="${{env.PROJECT_KEY}}"
+        run: |
+          jf rt bce ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --project="${{env.PROJECT_KEY}}"
+          # jf rt bad ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --project="${{env.PROJECT_KEY}}"
+          jf rt bag ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --project="${{env.PROJECT_KEY}}" 
+          jf rt bp ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --project="${{env.PROJECT_KEY}}" --detailed-summary=true 
+
+      - name: "BuildInfo: Xray - Build scan"
+        timeout-minutes: 15   
+        continue-on-error: true  
+        run: |
+          jf bs ${{env.BUILD_NAME}} ${{env.BUILD_ID}} --fail=false --format=table --extended-table=true --vuln=true --project="${{env.PROJECT_KEY}}"
 
       - name: "Evidence: GitHub Build Attestation"  
         continue-on-error: true
@@ -701,19 +639,57 @@ jobs:
           show-summary: true
           github-token: ${{secrets.GITHUB_TOKEN}} 
 
-      # - name: "Evidence: Build Info"
-      #   continue-on-error: true 
-      #   env:
-      #       EVD_JSON: "build/build-info.json"
-      #   run: |
-      #     cat ./${{env.EVD_JSON}}
-      #     jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_JSON}} --predicate-type https://jfrog.com/evidence/signature/v1 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}}
-      
       - name: "Evidence: cdx"
         continue-on-error: true 
         env:
-            EVD_JSON: "build/reports/application.cdx.json"    # https://jfrog.com/help/r/jfrog-artifactory-documentation/evidence-payload
+          EVD_JSON: "./build/reports/application.cdx.json"    # https://jfrog.com/help/r/jfrog-artifactory-documentation/evidence-payload
+          PREDICATE_TYPE: "https://cyclonedx.org/bom/v1.4"
         run: |
-          cat ./${{env.EVD_JSON}}
-          jf evd create --build-name ${{env.BUILD_NAME}} --build-number ${{env.BUILD_ID}} --predicate ./${{env.EVD_JSON}} --predicate-type https://cyclonedx.org/bom/v1.4 --key "${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias ${{secrets.EVIDENCE_KEY_ALIAS}} --project="${{env.PROJECT_KEY}}"
+          cat ${{env.EVD_JSON}}
+          jf evd create --build-name="${{env.BUILD_NAME}}" --build-number="${{env.BUILD_ID}}" --predicate="${{env.EVD_JSON}}" --predicate-type="${{env.PREDICATE_TYPE}}" --key="${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias="${{secrets.EVIDENCE_KEY_ALIAS}}" --project="${{env.PROJECT_KEY}}"
 
+      - name: "Evidence: Build Publish"
+        continue-on-error: true 
+        env:
+          EVD_SPEC_JSON: './gdl-evd-bp-spec-info.json'  # ref https://jfrog.com/help/r/jfrog-artifactory-documentation/evidence-setup
+          PREDICATE_TYPE: "https://jfrog.com/evidence/build-signature/v1"
+        run: |
+          echo '{ "actor": "${{github.actor}}", "pipeline": "github actions","build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence-BuildPublish"}' > ${{env.EVD_SPEC_JSON}}
+          cat ${{env.EVD_SPEC_JSON}}
+          jf evd create --build-name="${{env.BUILD_NAME}}" --build-number="${{env.BUILD_ID}}" --predicate="${{env.EVD_SPEC_JSON}}" --predicate-type="${{env.PREDICATE_TYPE}}" --key="${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias="${{secrets.EVIDENCE_KEY_ALIAS}}" --project="${{env.PROJECT_KEY}}"
+
+  metadata_info:
+    name: "Metadata Job Info"
+    runs-on: ubuntu-latest
+    needs: 
+      - dockerPackage
+      - mvnPackage
+      - gradlePackage
+    env:
+      METADATA_NAME: "bpr-metadata-${{github.run_number}}"
+      METADATA_FILE: "bpr_run_number-${{github.run_number}}.txt"
+    steps:
+      - name: "Write pipeline metadata info"
+        run: |
+          {
+            echo "bpr_run_number=${{ github.run_number }}"
+            echo "workflow_run_id=${{ github.run_id }}"
+            echo "commit_sha=${{ github.sha }}"
+            echo "branch=${{ github.ref_name }}"
+            echo "project_key=${{ env.PROJECT_KEY }}"
+            echo "build_name=${{ env.BUILD_NAME }}"
+            echo "build_time=$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          } > ${{env.METADATA_FILE}}
+
+      - name: "Show file"
+        run: |
+          cat ${{env.METADATA_FILE}}
+
+      - name: "Upload run number artifact"
+        uses: actions/upload-artifact@v7  # https://github.com/actions/upload-artifact
+        with:
+          name: ${{env.METADATA_NAME}}
+          path: ${{env.METADATA_FILE}}
+          retention-days: 7
+
+ 
