@@ -666,13 +666,13 @@ jobs:
       - mvnPackage
       - gradlePackage
     env:
-      METADATA_NAME: "bpr-metadata-${{github.run_number}}"
-      METADATA_FILE: "bpr_run_number-${{github.run_number}}.txt"
+      METADATA_NAME: "apptrust-metadata-${{github.run_number}}"
+      METADATA_FILE: "apptrust-${{github.run_number}}.txt"
     steps:
       - name: "Write pipeline metadata info"
         run: |
           {
-            echo "bpr_run_number=${{ github.run_number }}"
+            echo "apptrust_run_number=${{ github.run_number }}"
             echo "workflow_run_id=${{ github.run_id }}"
             echo "commit_sha=${{ github.sha }}"
             echo "branch=${{ github.ref_name }}"
