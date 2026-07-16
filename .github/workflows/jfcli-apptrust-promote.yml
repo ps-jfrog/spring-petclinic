@@ -63,6 +63,7 @@ jobs:
 
   dockerRBv2Promote2QA:
     name: "Docker: RBv2 Promote to QA env"
+    needs: dockerRBv2Promote2Dev
     runs-on: ubuntu-latest
     env:
       RBv2_ENV_VAL: "QA"
@@ -97,6 +98,7 @@ jobs:
 
   dockerRBv2Promote2Prod:
     name: "Docker: RBv2 Promote to PROD env"
+    needs: dockerRBv2Promote2QA
     runs-on: ubuntu-latest
     env:
       RBv2_ENV_VAL:  "DEV"
@@ -166,6 +168,7 @@ jobs:
 
   mvnRBv2Promote2QA:
     name: "MVN: RBv2 Promote to QA env"
+    needs: mvnRBv2Promote2Dev
     runs-on: ubuntu-latest
     env:
       RBv2_ENV_VAL: "QA"
@@ -200,6 +203,7 @@ jobs:
 
   mvnRBv2Promote2Prod:
     name: "MVN: RBv2 Promote to PROD env"
+    needs: mvnRBv2Promote2QA
     runs-on: ubuntu-latest
     env:
       RBv2_ENV_VAL: "PROD"
@@ -268,6 +272,7 @@ jobs:
 
   gradleRBv2Promote2QA:
     name: "Gradle: RBv2 Promote to QA env"
+    needs: gradleRBv2Promote2Dev
     runs-on: ubuntu-latest
     env:
       RBv2_ENV_VAL: "QA"
@@ -302,6 +307,7 @@ jobs:
 
   gradleRBv2Promote2Prod:
     name: "Gradle: RBv2 Promote to PROD env"
+    needs: gradleRBv2Promote2QA
     runs-on: ubuntu-latest
     env:
       RBv2_ENV_VAL: "PROD"
