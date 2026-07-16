@@ -11,6 +11,7 @@ permissions:
 env:
   JF_RT_URL: "https://${{vars.JF_NAME}}.jfrog.io"
   BUILD_NAME: "spring-petclinic" # spring-petclinic-3.5.0-SNAPSHOT.jar
+  RBV2_BUNDLE_NAME: "rbv2-spring-petclinic"
   PROJECT_KEY: "ps-apptrust-rlm"
   JOB_SUMMARY: false
   CLI_LOG_LEVEL: DEBUG # DEBUG, INFO, WARN, ERROR
@@ -24,7 +25,7 @@ jobs:
     name: "Docker Package"
     env:  
       BUILD_ID: "dkr-${{github.run_number}}"
-      RT_REPO_VIRTUAL: "apptrust-docker-virtual"
+      RT_REPO_VIRTUAL: "rbv2-spring-petclinic-docker-virtual"
       RT_REPO_LOCAL_DEFAULT: "rbv2-spring-petclinic-docker-init-local"
       RT_REPO_LOCAL_DEV: "rbv2-spring-petclinic-docker-dev-local"
       RT_REPO_LOCAL_QA: "rbv2-spring-petclinic-docker-qa-local"
@@ -170,7 +171,7 @@ jobs:
 
       - name: "Package: Docker build and push"
         env:
-          DOCKER_FILE: "./jfrog/Dockerfile"
+          DOCKER_FILE: "./jfrog/AppTrustDockerfile"
           JAR_FILE: "./target/${{env.ARTIFACT_NAME}}-${{env.ARTIFACT_VERSION}}.jar"
           TAG10: "${{vars.JF_NAME}}.jfrog.io/${{env.RT_REPO_VIRTUAL}}/${{env.ARTIFACT_NAME}}:${{env.ARTIFACT_VERSION}}"
           TAG11: "${{vars.JF_NAME}}.jfrog.io/${{env.RT_REPO_VIRTUAL}}/${{env.ARTIFACT_NAME}}:${{env.SHORT_COMMIT_CODE}}"

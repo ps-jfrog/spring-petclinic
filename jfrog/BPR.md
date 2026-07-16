@@ -15,3 +15,6 @@
 ![Build](./images/bpr-build.png)
 ![Build VCS](./images/bpr-vcs.png)
 ![Build Release History](./images/bpr-history.png)
+
+## CI / CD Practices
+![CI CD Practices](./images/bpr-cicd-practices.png)
