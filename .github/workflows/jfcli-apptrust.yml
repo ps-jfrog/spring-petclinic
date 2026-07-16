@@ -18,6 +18,7 @@ env:
   JAVA_DISTRIBUTION: 'temurin'
   JAVA_VERSION: '25'
   RBV2_SIGNING_KEY: "${{secrets.RBV2_SIGNING_KEY}}" # ref https://jfrog.com/help/r/jfrog-artifactory-documentation/create-signing-keys-for-release-bundles-v2
+  RBv2_SPEC_JSON: "rbv2-spec-info.json"
   DEFAULT_WORKSPACE: "${{github.workspace}}"  # /home/runner/work/spring-petclinic/spring-petclinic
 
 jobs:
