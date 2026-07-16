@@ -17,7 +17,7 @@ env:
   CLI_LOG_LEVEL: DEBUG # DEBUG, INFO, WARN, ERROR
   JAVA_DISTRIBUTION: 'temurin'
   JAVA_VERSION: '25'
-  #RBV2_SIGNING_KEY: "${{secrets.RBV2_SIGNING_KEY}}" # ref https://jfrog.com/help/r/jfrog-artifactory-documentation/create-signing-keys-for-release-bundles-v2
+  RBV2_SIGNING_KEY: "${{secrets.RBV2_SIGNING_KEY}}" # ref https://jfrog.com/help/r/jfrog-artifactory-documentation/create-signing-keys-for-release-bundles-v2
   DEFAULT_WORKSPACE: "${{github.workspace}}"  # /home/runner/work/spring-petclinic/spring-petclinic
 
 jobs:
@@ -304,6 +304,22 @@ jobs:
         continue-on-error: true 
         run: |
           jf xr curl /api/v2/ci/build -H 'Content-Type: application/json' -d '{"build_name": "${{env.BUILD_NAME}}", "build_number": "${{env.BUILD_ID}}","rescan":false  }'
+ 
+      # Release Bundle v2
+      - name: "RLM: RBv2 spec - create"
+        run: |
+          echo "{ \"files\": [ {\"build\": \"${{env.BUILD_NAME}}/${{env.BUILD_ID}}\", \"includeDeps\":\"true\", \"project\":\"${{env.PROJECT_KEY}}\" } ] }"  > ${{env.RBv2_SPEC_JSON}}
+
+
+      - name: "RLM: RBv2 Create NEW"
+        run: |
+          cat ${{env.RBv2_SPEC_JSON}}
+          jf rbc ${{env.RBV2_BUNDLE_NAME}} ${{env.BUILD_ID}} --sync=true --signing-key=${{secrets.RBV2_SIGNING_KEY}} --spec=${{env.RBv2_SPEC_JSON}} --project="${{env.PROJECT_KEY}}"
+
+      - name: "RLM: Xray Indexing"
+        run: |
+            jf xr curl "/api/v1/binMgr/release_bundle_v2" -H 'Content-Type: application/json' -d "{\"names\": [\"${{env.RBV2_BUNDLE_NAME}}\"] }"
+
 
   mvnPackage:
     name: "Maven Package"
@@ -509,6 +525,21 @@ jobs:
         run: |
           jf xr curl /api/v2/ci/build -H 'Content-Type: application/json' -d '{"build_name": "${{env.BUILD_NAME}}", "build_number": "${{env.BUILD_ID}}","rescan":false }'
 
+      # Release Bundle v2
+      - name: "RLM: RBv2 spec - create"
+        run: |
+          echo "{ \"files\": [ {\"build\": \"${{env.BUILD_NAME}}/${{env.BUILD_ID}}\", \"includeDeps\":\"true\", \"project\":\"${{env.PROJECT_KEY}}\" } ] }"  > ${{env.RBv2_SPEC_JSON}}
+
+      - name: "RLM: RBv2 Create NEW"
+        run: |
+          cat ${{env.RBv2_SPEC_JSON}}
+          jf rbc ${{env.RBV2_BUNDLE_NAME}} ${{env.BUILD_ID}} --sync=true --signing-key=${{secrets.RBV2_SIGNING_KEY}} --spec=${{env.RBv2_SPEC_JSON}} --project="${{env.PROJECT_KEY}}"
+
+      - name: "RLM: Xray Indexing"
+        run: |
+            jf xr curl "/api/v1/binMgr/release_bundle_v2" -H 'Content-Type: application/json' -d "{\"names\": [\"${{env.RBV2_BUNDLE_NAME}}\"] }"          
+
+
   gradlePackage:
     name: "Gradle Package"
     env:  
@@ -658,6 +689,21 @@ jobs:
           echo '{ "actor": "${{github.actor}}", "pipeline": "github actions","build_name": "${{env.BUILD_NAME}}", "build_id": "${{env.BUILD_ID}}", "evd": "Evidence-BuildPublish"}' > ${{env.EVD_SPEC_JSON}}
           cat ${{env.EVD_SPEC_JSON}}
           jf evd create --build-name="${{env.BUILD_NAME}}" --build-number="${{env.BUILD_ID}}" --predicate="${{env.EVD_SPEC_JSON}}" --predicate-type="${{env.PREDICATE_TYPE}}" --key="${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias="${{secrets.EVIDENCE_KEY_ALIAS}}" --project="${{env.PROJECT_KEY}}"
+
+      # Release Bundle v2
+      - name: "RLM: RBv2 spec - create"
+        run: |
+          echo "{ \"files\": [ {\"build\": \"${{env.BUILD_NAME}}/${{env.BUILD_ID}}\", \"includeDeps\":\"true\", \"project\":\"${{env.PROJECT_KEY}}\" } ] }"  > ${{env.RBv2_SPEC_JSON}}
+
+      - name: "RLM: RBv2 Create NEW"
+        run: |
+          cat ${{env.RBv2_SPEC_JSON}}
+          jf rbc ${{env.RBV2_BUNDLE_NAME}} ${{env.BUILD_ID}} --sync=true --signing-key=${{secrets.RBV2_SIGNING_KEY}} --spec=${{env.RBv2_SPEC_JSON}} --project="${{env.PROJECT_KEY}}"
+
+      - name: "RLM: Xray Indexing"
+        run: |
+            jf xr curl "/api/v1/binMgr/release_bundle_v2" -H 'Content-Type: application/json' -d "{\"names\": [\"${{env.RBV2_BUNDLE_NAME}}\"] }"
+
 
   metadata_info:
     name: "Metadata Job Info"
