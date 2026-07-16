@@ -3,7 +3,7 @@ on:
   workflow_run:
     workflows: 
       - "BPR: Package"
-    types: [completed]
+    types: [success]     # [completed]
 permissions:
   pull-requests: write
   contents: write

@@ -4,7 +4,7 @@ on:
     workflows: 
       # - "BPR: Package"
       - "BPR: Promote"
-    types: [completed]
+    types: [success]     # [completed]
 permissions:
   pull-requests: write
   contents: write
