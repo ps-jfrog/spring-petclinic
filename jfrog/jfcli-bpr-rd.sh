@@ -48,7 +48,10 @@ cat ${RBv2_SPEC_JSON}
 jf rbc ${RBv2_BUNDLE_NAME} ${BUILD_ID} --sync=true --signing-key=${RBV2_SIGNING_KEY} --spec=${RBv2_SPEC_JSON} --project=${PROJECT_KEY}
 
 # ref: https://docs.jfrog.com/governance/docs/release-lifecycle-management-cli#distribute-a-release-bundle-v2
-jf rbd ${RBv2_BUNDLE_NAME} ${BUILD_ID} --sync=true --create-repo=true --project=${PROJECT_KEY} --site
+#jf rbd ${RBv2_BUNDLE_NAME} ${BUILD_ID} --sync=true --create-repo=true --project=${PROJECT_KEY} --site="psazeuwedge"
+jf rbd "rbv2-spring-petclinic" "bpr-mvn-45" --sync=true --create-repo=true --site="psazeuwedge" --project="ps-build-promote"
+# jf rbd "rbv2-spring-petclinic" "bpr-mvn-45" --sync=true --create-repo=true --site="psazeuwedge" --project="ps-build-promote"
+
 
 # echo "\n*** Download RBv2 from SaaS Edge\n"
 # jf rt dl --bundle ${{env.BUILD_NAME}}/${{env.BUILD_ID}} --detailed-summary=true --threads=100

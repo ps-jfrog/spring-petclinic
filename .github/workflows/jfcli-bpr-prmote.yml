@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ENV_VAL: "DEV"
-      BUILD_ID: "bpr-dkr-${{github.event.workflow_run.run_number}}"
+      BUILD_ID: "dkr-${{github.event.workflow_run.run_number}}"
       RT_REPO_DEV_LOCAL: "bpr-spring-petclinic-docker-dev-local"
     defaults:
        run:
@@ -86,7 +86,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ENV_VAL: "DEV"
-      BUILD_ID: "bpr-mvn-${{github.event.workflow_run.run_number}}"
+      BUILD_ID: "mvn-${{github.event.workflow_run.run_number}}"
       RT_REPO_DEV_LOCAL: "bpr-spring-petclinic-mvn-dev-local"
     defaults:
        run:
@@ -142,7 +142,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ENV_VAL: "DEV"
-      BUILD_ID: "bpr-gdl-${{github.event.workflow_run.run_number}}"
+      BUILD_ID: "gdl-${{github.event.workflow_run.run_number}}"
       RT_REPO_DEV_LOCAL: "bpr-spring-petclinic-gradle-dev-fed"
     defaults:
        run:
@@ -199,7 +199,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ENV_VAL: "QA"
-      BUILD_ID: "bpr-dkr-${{github.event.workflow_run.run_number}}"
+      BUILD_ID: "dkr-${{github.event.workflow_run.run_number}}"
       RT_REPO_QA_LOCAL: "bpr-spring-petclinic-docker-qa-local"
     defaults:
        run:
@@ -256,7 +256,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ENV_VAL: "QA"
-      BUILD_ID: "bpr-mvn-${{github.event.workflow_run.run_number}}"
+      BUILD_ID: "mvn-${{github.event.workflow_run.run_number}}"
       RT_REPO_QA_LOCAL: "bpr-spring-petclinic-mvn-qa-local"
     defaults:
        run:
@@ -313,7 +313,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ENV_VAL: "QA"
-      BUILD_ID: "bpr-gdl-${{github.event.workflow_run.run_number}}"
+      BUILD_ID: "gdl-${{github.event.workflow_run.run_number}}"
       RT_REPO_QA_LOCAL: "bpr-spring-petclinic-gradle-qa-fed"
     defaults:
        run:
@@ -370,7 +370,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ENV_VAL: "PROD"
-      BUILD_ID: "bpr-dkr-${{github.event.workflow_run.run_number}}"
+      BUILD_ID: "dkr-${{github.event.workflow_run.run_number}}"
       RT_REPO_QA_LOCAL: "bpr-spring-petclinic-docker-prod-local"
     defaults:
        run:
@@ -427,7 +427,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ENV_VAL: "PROD"
-      BUILD_ID: "bpr-mvn-${{github.event.workflow_run.run_number}}"
+      BUILD_ID: "mvn-${{github.event.workflow_run.run_number}}"
       RT_REPO_QA_LOCAL: "bpr-spring-petclinic-mvn-prod-local"
     defaults:
        run:
@@ -484,7 +484,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ENV_VAL: "PROD"
-      BUILD_ID: "bpr-gdl-${{github.event.workflow_run.run_number}}"
+      BUILD_ID: "gdl-${{github.event.workflow_run.run_number}}"
       RT_REPO_QA_LOCAL: "bpr-spring-petclinic-gradle-prod-fed"
     defaults:
        run:

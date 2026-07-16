@@ -54,7 +54,7 @@ jobs:
     needs: resolvePackageRun
     runs-on: ubuntu-latest
     env:
-      BUILD_ID: "bpr-dkr-${{ needs.resolvePackageRun.outputs.package_run_number }}"
+      BUILD_ID: "dkr-${{ needs.resolvePackageRun.outputs.package_run_number }}"
       RBV2_BUNDLE_ID: "dkr-${{ needs.resolvePackageRun.outputs.package_run_number }}"
       RBv2_SPEC_JSON: "rbv2-spec-info.json"
     defaults:
@@ -165,7 +165,7 @@ jobs:
     needs: resolvePackageRun
     runs-on: ubuntu-latest
     env:
-      BUILD_ID: "bpr-mvn-${{ needs.resolvePackageRun.outputs.package_run_number }}"
+      BUILD_ID: "mvn-${{ needs.resolvePackageRun.outputs.package_run_number }}"
       RBV2_BUNDLE_ID: "mvn-${{ needs.resolvePackageRun.outputs.package_run_number }}"
       RBv2_SPEC_JSON: "rbv2-spec-info.json"
     defaults:
@@ -239,6 +239,118 @@ jobs:
     env:
       JF_EDGE_URL: "https://${{vars.JF_EDGE_NAME}}.jfrog.io"
       BUILD_ID: "psj-dkr-${{github.run_number}}"
+    steps:
+      - name: "Setup JFrog CLI"
+        uses: jfrog/setup-jfrog-cli@v4
+        id: setup-cli
+        env:
+          JF_URL: ${{env.JF_EDGE_URL}}
+          JFROG_CLI_LOG_LEVEL: "ERROR"
+        with:
+          version: latest 
+          oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}    
+          disable-job-summary: ${{env.JOB_SUMMARY}}
+      
+      - name: "Edge config show"
+        run: |
+          jf config show
+
+      # refer: https://docs.jfrog-applications.jfrog.io/jfrog-applications/jfrog-cli/binaries-management-with-jfrog-artifactory/release-lifecycle-management#download-release-bundle-v2-content
+      - name: "Download RBv2 from SaaS Edge"
+        run: |
+          jf rt dl --bundle ${{env.BUILD_NAME}}/${{env.BUILD_ID}} --detailed-summary=true --threads=100
+
+      - name: "Info list"
+        run: |
+          pwd
+          ls -lR .
+
+      - name: "Optional: Saas ${{vars.JF_EDGE_NAME}} Edge summary"
+        run: |
+          echo "# :frog: Download package from SaaS ${{vars.JF_EDGE_URL}} 📦 " >> $GITHUB_STEP_SUMMARY
+          echo "  - Download RBv2 from Edge [${{vars.JF_EDGE_NAME}}](${{env.JF_EDGE_URL}}) " >> $GITHUB_STEP_SUMMARY
+          echo " " >> $GITHUB_STEP_SUMMARY
+
+
+  gradleRBDistribution:
+    name: "Gradle: RB Distribution"
+    needs: resolvePackageRun
+    runs-on: ubuntu-latest
+    env:
+      BUILD_ID: "gdl-${{ needs.resolvePackageRun.outputs.package_run_number }}"
+      RBV2_BUNDLE_ID: "gdl-${{ needs.resolvePackageRun.outputs.package_run_number }}"
+      RBv2_SPEC_JSON: "rbv2-spec-info.json"
+    defaults:
+       run:
+         working-directory: "${{env.DEFAULT_WORKSPACE}}"
+    steps:
+      - name: "Setup JFrog CLI"
+        uses: jfrog/setup-jfrog-cli@v5
+        id: setup-cli
+        env:
+          JF_URL: ${{env.JF_RT_URL}}
+          JF_PROJECT: "${{env.PROJECT_KEY}}"
+          JFROG_CLI_LOG_LEVEL: "${{env.CLI_LOG_LEVEL}}"
+        with:
+          version: latest  #2.71.0
+          oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
+          disable-job-summary: ${{env.JOB_SUMMARY}}
+
+      - name: "RLM: RBv2 spec - create"
+        run: |
+          echo "{ \"files\": [ {\"build\": \"${{env.BUILD_NAME}}/${{env.BUILD_ID}}\", \"includeDeps\":\"true\", \"project\":\"${{env.PROJECT_KEY}}\"} ] }"  > ${{env.RBv2_SPEC_JSON}}
+          cat ${{env.RBv2_SPEC_JSON}}
+
+      - name: "RLM: RBv2 Create NEW"
+        run: |
+          jf rbc ${{env.RBV2_BUNDLE_NAME}} ${{env.BUILD_ID}} --sync=true --signing-key=${{secrets.RBV2_SIGNING_KEY}} --spec=${{env.RBv2_SPEC_JSON}} --project=${{env.PROJECT_KEY}}
+
+      - name: "RLM: Xray Indexing"
+        run: |
+            jf xr curl "/api/v1/binMgr/release_bundle_v2" -H 'Content-Type: application/json' -d "{\"names\": [\"${{env.RBV2_BUNDLE_NAME}}\"] }"
+
+      # ref: https://docs.jfrog-applications.jfrog.io/jfrog-applications/jfrog-cli/binaries-management-with-jfrog-artifactory/release-lifecycle-management#distribute-a-release-bundle-v2
+      - name: "RBv2 Distribute to SaaS Artifactory and edges"
+        continue-on-error: true
+        run: |
+          jf rbd ${{env.RBV2_BUNDLE_NAME}} ${{env.BUILD_ID}} --sync=true --create-repo=true
+
+      - name: "Query Distribution status"  # https://psazuse.jfrog.io/lifecycle/api/v2/distribution/trackers/spring-petclinic/ga-49
+        run: |
+            jf rt curl "/lifecycle/api/v2/distribution/trackers/${{env.BUILD_NAME}}/${{env.BUILD_ID}}"
+
+      - name: "Optional Saas Artifactory summary"
+        continue-on-error: true
+        env:
+          CURL_URL: "${{env.JF_RT_URL}}/lifecycle/api/v2/distribution/trackers/${{env.BUILD_NAME}}/${{env.BUILD_ID}}"
+        run: |
+          echo "# :frog: Gradle DL 📦 " >> $GITHUB_STEP_SUMMARY
+          echo "  - Download RBv2 from Artifactory [${{env.JF_RT_URL}}](${{env.JF_RT_URL}}) to " >> $GITHUB_STEP_SUMMARY
+          echo "  - Rlease Bundle name: ${{env.RBV2_BUNDLE_NAME}} to " >> $GITHUB_STEP_SUMMARY
+          echo "  - Rlease Bundle ID: ${{env.RBV2_BUNDLE_ID}} to " >> $GITHUB_STEP_SUMMARY
+          echo "  - Build name: ${{env.BUILD_NAME}} to " >> $GITHUB_STEP_SUMMARY
+          echo "  - Build ID: ${{env.BUILD_ID}} to " >> $GITHUB_STEP_SUMMARY
+          RB2_DISTRIBUTE_RESP=$(curl -v -G ${{env.CURL_URL}} -H 'Content-Type:  application/json' -H "Authorization: Bearer ${{steps.setup-cli.outputs.oidc-token}}")
+          echo $RB2_DISTRIBUTE_RESP > RB2_DISTRIBUTE-${{env.BUILD_ID}}.json
+          cat RB2_DISTRIBUTE-${{env.BUILD_ID}}.json 
+          items=$(echo "$RB2_DISTRIBUTE_RESP" | jq -c -r '.[] .targets[]')
+          for item in ${items[@]}; do
+            echo $item
+            echo "   - [${item}.jfrog.io](https://${item}.jfrog.io) " >> $GITHUB_STEP_SUMMARY
+          done
+          echo " " >> $GITHUB_STEP_SUMMARY
+
+  gradleDownloadRBv2FromSaasEdge:
+    name: "Gradle: Download RBv2 from SaaS ${{vars.JF_EDGE_NAME}} Edge"
+    needs: gradleRBDistribution
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    defaults:
+       run:
+         working-directory: "${{env.DEFAULT_WORKSPACE}}"
+    env:
+      JF_EDGE_URL: "https://${{vars.JF_EDGE_NAME}}.jfrog.io"
+      BUILD_ID: "psj-gdl-${{github.run_number}}"
     steps:
       - name: "Setup JFrog CLI"
         uses: jfrog/setup-jfrog-cli@v4

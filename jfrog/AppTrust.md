@@ -48,3 +48,11 @@
 ![JFrog XRay](./images/xray-scan-dkr-rbv2-sbom.png)
 ![JFrog XRay](./images/xray-scan-mvn-rbv2.png)
 ![JFrog XRay](./images/xray-scan-mvn-rbv2-vun.png)
+
+
+## GitHub Actions - Status
+ - [![AppTrust: Package](https://github.com/ps-jfrog/spring-petclinic/actions/workflows/jfcli-apptrust.yml/badge.svg)](https://github.com/ps-jfrog/spring-petclinic/actions/workflows/jfcli-apptrust.yml)
+ - [![AppTrust: RBv2 Promote](https://github.com/ps-jfrog/spring-petclinic/actions/workflows/jfcli-apptrust-promote.yml/badge.svg)](https://github.com/ps-jfrog/spring-petclinic/actions/workflows/jfcli-apptrust-promote.yml)
+ - [![AppTrust: RBv2 Distribute](https://github.com/ps-jfrog/spring-petclinic/actions/workflows/jfcli-apptrust-distribute.yml/badge.svg)](https://github.com/ps-jfrog/spring-petclinic/actions/workflows/jfcli-apptrust-distribute.yml)
+
+ 

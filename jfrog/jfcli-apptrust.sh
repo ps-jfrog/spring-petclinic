@@ -10,6 +10,7 @@ export BUILD_NAME="spring-petclinic" BUILD_ID="cmd-at.$(date '+%Y-%m-%d-%H-%M')"
 
 jf config use ${JF_NAME}
 
+set -x  # debug mode ON
 echo " ** Maven package **"
 jf mvnc --global --repo-resolve-releases ${RT_REPO_VIRTUAL} --repo-resolve-snapshots ${RT_REPO_VIRTUAL} --repo-deploy-releases ${RT_REPO_VIRTUAL} --repo-deploy-snapshots ${RT_REPO_VIRTUAL}
 jf mvn clean install -DskipTests=true --build-name=${BUILD_NAME} --build-number=${BUILD_ID} --project="${PROJECT_KEY}" --detailed-summary=true
@@ -45,6 +46,7 @@ jf rbp ${RBv2_BUNDLE_NAME} ${BUILD_ID} PROD --sync=true --signing-key=${RBV2_SIG
 # echo "\n*** Download RBv2 from SaaS Edge\n"
 # jf rt dl --bundle ${{env.BUILD_NAME}}/${{env.BUILD_ID}} --detailed-summary=true --threads=100
 
+set +x  # debug mode OFF
 
 sleep 2
 rm -rf ${RBv2_SPEC_JSON}

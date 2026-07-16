@@ -18,3 +18,8 @@
 
 ## CI / CD Practices
 ![CI CD Practices](./images/bpr-cicd-practices.png)
+
+## GitHub Actions - Status
+ - [![BPR: Package](https://github.com/ps-jfrog/spring-petclinic/actions/workflows/jfcli-bpr.yml/badge.svg)](https://github.com/ps-jfrog/spring-petclinic/actions/workflows/jfcli-bpr.yml)
+ - [![BPR: Promote](https://github.com/ps-jfrog/spring-petclinic/actions/workflows/jfcli-bpr-prmote.yml/badge.svg)](https://github.com/ps-jfrog/spring-petclinic/actions/workflows/jfcli-bpr-prmote.yml)
+ - [![BPR: RB Distribution](https://github.com/ps-jfrog/spring-petclinic/actions/workflows/jfcli-bpr-rbd.yml/badge.svg)](https://github.com/ps-jfrog/spring-petclinic/actions/workflows/jfcli-bpr-rbd.yml)

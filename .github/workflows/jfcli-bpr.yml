@@ -23,7 +23,7 @@ jobs:
   dockerPackage:
     name: "Docker Package"
     env:  
-      BUILD_ID: "bpr-dkr-${{github.run_number}}"
+      BUILD_ID: "dkr-${{github.run_number}}"
       RT_REPO_VIRTUAL: "bpr-spring-petclinic-docker-virtual"
       RT_REPO_LOCAL_DEFAULT: "bpr-spring-petclinic-docker-init-local"
       RT_REPO_LOCAL_DEV: "bpr-spring-petclinic-docker-dev-local"
@@ -307,7 +307,7 @@ jobs:
   mvnPackage:
     name: "Maven Package"
     env:  
-      BUILD_ID: "bpr-mvn-${{github.run_number}}"
+      BUILD_ID: "mvn-${{github.run_number}}"
       RT_REPO_VIRTUAL: "bpr-spring-petclinic-mvn-virtual"
       RT_REPO_LOCAL_DEFAULT: "bpr-spring-petclinic-mvn-init-local"
       RT_REPO_LOCAL_DEV: "bpr-spring-petclinic-mvn-dev-local"
@@ -511,7 +511,7 @@ jobs:
   gradlePackage:
     name: "Gradle Package"
     env:  
-      BUILD_ID: "bpr-gdl-${{github.run_number}}"
+      BUILD_ID: "gdl-${{github.run_number}}"
       RT_REPO_VIRTUAL: "bpr-spring-petclinic-gradle-virtual"
       RT_REPO_LOCAL_DEFAULT: "bpr-spring-petclinic-gradle-init-fed"   # federation sites: psazuse, psemea
       RT_REPO_LOCAL_DEV: "bpr-spring-petclinic-gradle-dev-fed"
