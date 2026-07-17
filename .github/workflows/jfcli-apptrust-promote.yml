@@ -3,7 +3,7 @@ on:
   workflow_run:
     workflows: 
       - "AppTrust: Package"
-    types: [success]     # [completed]
+    types: [completed]
 permissions:
   pull-requests: write
   contents: write

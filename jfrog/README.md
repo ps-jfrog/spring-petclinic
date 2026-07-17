@@ -2,7 +2,7 @@
 
 - [Build Promote Release (BPR)](./BPR.md)
     - [![BPR: Package](https://github.com/ps-jfrog/spring-petclinic/actions/workflows/jfcli-bpr.yml/badge.svg)](https://github.com/ps-jfrog/spring-petclinic/actions/workflows/jfcli-bpr.yml)
-    - [![BPR: Promote](https://github.com/ps-jfrog/spring-petclinic/actions/workflows/jfcli-bpr-prmote.yml/badge.svg)](https://github.com/ps-jfrog/spring-petclinic/actions/workflows/jfcli-bpr-prmote.yml)
+    - [![BPR: Promote](https://github.com/ps-jfrog/spring-petclinic/actions/workflows/jfcli-bpr-promote.yml/badge.svg)](https://github.com/ps-jfrog/spring-petclinic/actions/workflows/jfcli-bpr-promote.yml)
     - [![BPR: RB Distribution](https://github.com/ps-jfrog/spring-petclinic/actions/workflows/jfcli-bpr-rbd.yml/badge.svg)](https://github.com/ps-jfrog/spring-petclinic/actions/workflows/jfcli-bpr-rbd.yml)
 - [RLM with App Trust](./AppTrust.md)
     - [![AppTrust: Package](https://github.com/ps-jfrog/spring-petclinic/actions/workflows/jfcli-apptrust.yml/badge.svg)](https://github.com/ps-jfrog/spring-petclinic/actions/workflows/jfcli-apptrust.yml)
