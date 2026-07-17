@@ -1,9 +1,9 @@
-name: "BPR: RB Distribution"
+name: "AppTrust: RBv2 Distribute"
 on: 
   workflow_run:
     workflows: 
-      # - "BPR: Package"
-      - "BPR: Promote"
+      # - "AppTrust: Package"
+      - "AppTrust: RBv2 Promote"
     types: [completed]
 permissions:
   pull-requests: write
@@ -16,44 +16,42 @@ permissions:
   artifact-metadata: write
 env:
   JF_RT_URL: "https://${{vars.JF_NAME}}.jfrog.io"
+  BUILD_NAME: "spring-petclinic" 
   RBV2_BUNDLE_NAME: "rbv2-spring-petclinic"
-  BUILD_NAME: "spring-petclinic" # spring-petclinic-3.5.0-SNAPSHOT.jar
-  PROJECT_KEY: "ps-build-promote"
+  PROJECT_KEY: "ps-apptrust-rlm"
   JOB_SUMMARY: false
   CLI_LOG_LEVEL: DEBUG # DEBUG, INFO, WARN, ERROR
   JAVA_DISTRIBUTION: 'temurin'
   JAVA_VERSION: '25'
-  #RBV2_SIGNING_KEY: "${{secrets.RBV2_SIGNING_KEY}}" # ref https://jfrog.com/help/r/jfrog-artifactory-documentation/create-signing-keys-for-release-bundles-v2
-  DEFAULT_WORKSPACE: "${{github.workspace}}"  # /home/runner/work/spring-petclinic/spring-petclinic
+  RBV2_SIGNING_KEY: "${{secrets.RBV2_SIGNING_KEY}}" # ref https://jfrog.com/help/r/jfrog-artifactory-documentation/create-signing-keys-for-release-bundles-v2
+  EVIDENCE_SPEC_JSON: "evd-spec-info.json"
+  DEFAULT_WORKSPACE: "${{github.workspace}}"
 
 jobs:
   resolvePackageRun:
-    name: "Resolve BPR: Package run number"
-    # Jobs do not start when BPR: Promote failed or was cancelled.
-    # Promote uses a failing gate on Package failure so its conclusion is not a false success.
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    name: "Resolve AppTrust: Package run number"
     runs-on: ubuntu-latest
     outputs:
       package_run_number: ${{ steps.pkg.outputs.package_run_number }}
     steps:
-      - name: "Resolve BPR Package run number"
+      - name: "Resolve AppTrust: Package run number"
         id: pkg
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if [[ "${{ github.event.workflow_run.name }}" == "BPR: Package" ]]; then
+          if [[ "${{ github.event.workflow_run.name }}" == "AppTrust: Package" ]]; then
             N="${{ github.event.workflow_run.run_number }}"
           else
             SHA='${{ github.event.workflow_run.head_sha }}'
-            N=$(gh api "repos/${{ github.repository }}/actions/workflows/jfcli-bpr.yml/runs?head_sha=${SHA}&per_page=20" \
-              --jq '(.workflow_runs | map(select(.name=="BPR: Package")) | sort_by(.created_at) | reverse | .[0].run_number // empty)')
-            [[ -n "$N" ]] || { echo "::error::Could not resolve BPR: Package run_number for sha=${SHA}"; exit 1; }
+            N=$(gh api "repos/${{ github.repository }}/actions/workflows/jfcli-apptrust.yml/runs?head_sha=${SHA}&per_page=20" \
+              --jq '(.workflow_runs | map(select(.name=="AppTrust: Package")) | sort_by(.created_at) | reverse | .[0].run_number // empty)')
+            [[ -n "$N" ]] || { echo "::error::Could not resolve AppTrust: Package run_number for sha=${SHA}"; exit 1; }
           fi
           echo "package_run_number=${N}" >> "$GITHUB_OUTPUT"
-          echo "Resolved BPR: Package run_number=${N} (trigger=${{ github.event.workflow_run.name }})"
+          echo "Resolved AppTrust: Package run_number=${N} (trigger=${{ github.event.workflow_run.name }})"
 
-  dockerRBDistribution:
-    name: "Docker: RB Distribution"
+  dockerRBv2Distribute:
+    name: "Docker: RBv2 Distribution"
     needs: resolvePackageRun
     runs-on: ubuntu-latest
     env:
@@ -76,28 +74,11 @@ jobs:
           oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
           disable-job-summary: ${{env.JOB_SUMMARY}}
 
-      - name: "RLM: RBv2 spec - create"
-        run: |
-          echo "{ \"files\": [ {\"build\": \"${{env.BUILD_NAME}}/${{env.BUILD_ID}}\", \"includeDeps\":\"true\", \"project\":\"${{env.PROJECT_KEY}}\"} ] }"  > ${{env.RBv2_SPEC_JSON}}
-          cat ${{env.RBv2_SPEC_JSON}}
-
-      - name: "RLM: RBv2 Create NEW"
-        run: |
-          jf rbc ${{env.RBV2_BUNDLE_NAME}} ${{env.BUILD_ID}} --sync=true --signing-key=${{secrets.RBV2_SIGNING_KEY}} --spec=${{env.RBv2_SPEC_JSON}} --project=${{env.PROJECT_KEY}}
-
-      - name: "RLM: Xray Indexing"
-        run: |
-            jf xr curl "/api/v1/binMgr/release_bundle_v2" -H 'Content-Type: application/json' -d "{\"names\": [\"${{env.RBV2_BUNDLE_NAME}}\"] }"
-
       # ref: https://docs.jfrog-applications.jfrog.io/jfrog-applications/jfrog-cli/binaries-management-with-jfrog-artifactory/release-lifecycle-management#distribute-a-release-bundle-v2
       - name: "RBv2 Distribute to SaaS Artifactory and edges"
         continue-on-error: true
         run: |
           jf rbd ${{env.RBV2_BUNDLE_NAME}} ${{env.BUILD_ID}} --sync=true --create-repo=true
-
-      - name: "Query Distribution status"  # https://psazuse.jfrog.io/lifecycle/api/v2/distribution/trackers/spring-petclinic/ga-49
-        run: |
-            jf rt curl "/lifecycle/api/v2/distribution/trackers/${{env.BUILD_NAME}}/${{env.BUILD_ID}}"
 
       - name: "Optional Saas Artifactory summary"
         continue-on-error: true
@@ -122,7 +103,7 @@ jobs:
 
   dockerDownloadRBv2FromSaasEdge:
     name: "Docker: Download RBv2 from SaaS ${{vars.JF_EDGE_NAME}} Edge"
-    needs: dockerRBDistribution
+    needs: dockerRBv2Distribute
     runs-on: ubuntu-latest
     continue-on-error: true
     defaults:
@@ -163,8 +144,8 @@ jobs:
           echo "  - Download RBv2 from Edge [${{vars.JF_EDGE_NAME}}](${{env.JF_EDGE_URL}}) " >> $GITHUB_STEP_SUMMARY
           echo " " >> $GITHUB_STEP_SUMMARY
 
-  mvnRBDistribution:
-    name: "MVN: RB Distribution"
+  mvnRBv2Distribution:
+    name: "MVN: RBv2 Distribution"
     needs: resolvePackageRun
     runs-on: ubuntu-latest
     env:
@@ -186,19 +167,6 @@ jobs:
           version: latest  #2.71.0
           oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
           disable-job-summary: ${{env.JOB_SUMMARY}}
-
-      - name: "RLM: RBv2 spec - create"
-        run: |
-          echo "{ \"files\": [ {\"build\": \"${{env.BUILD_NAME}}/${{env.BUILD_ID}}\", \"includeDeps\":\"true\", \"project\":\"${{env.PROJECT_KEY}}\"} ] }"  > ${{env.RBv2_SPEC_JSON}}
-          cat ${{env.RBv2_SPEC_JSON}}
-
-      - name: "RLM: RBv2 Create NEW"
-        run: |
-          jf rbc ${{env.RBV2_BUNDLE_NAME}} ${{env.BUILD_ID}} --sync=true --signing-key=${{secrets.RBV2_SIGNING_KEY}} --spec=${{env.RBv2_SPEC_JSON}} --project=${{env.PROJECT_KEY}}
-
-      - name: "RLM: Xray Indexing"
-        run: |
-            jf xr curl "/api/v1/binMgr/release_bundle_v2" -H 'Content-Type: application/json' -d "{\"names\": [\"${{env.RBV2_BUNDLE_NAME}}\"] }"
 
       # ref: https://docs.jfrog-applications.jfrog.io/jfrog-applications/jfrog-cli/binaries-management-with-jfrog-artifactory/release-lifecycle-management#distribute-a-release-bundle-v2
       - name: "RBv2 Distribute to SaaS Artifactory and edges"
@@ -233,7 +201,7 @@ jobs:
 
   mvnDownloadRBv2FromSaasEdge:
     name: "MVN: Download RBv2 from SaaS ${{vars.JF_EDGE_NAME}} Edge"
-    needs: mvnRBDistribution
+    needs: mvnRBv2Distribution
     runs-on: ubuntu-latest
     continue-on-error: true
     defaults:
@@ -275,8 +243,8 @@ jobs:
           echo " " >> $GITHUB_STEP_SUMMARY
 
 
-  gradleRBDistribution:
-    name: "Gradle: RB Distribution"
+  gradleRBv2Distribution:
+    name: "Gradle: RBv2 Distribution"
     needs: resolvePackageRun
     runs-on: ubuntu-latest
     env:
@@ -298,19 +266,6 @@ jobs:
           version: latest  #2.71.0
           oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
           disable-job-summary: ${{env.JOB_SUMMARY}}
-
-      - name: "RLM: RBv2 spec - create"
-        run: |
-          echo "{ \"files\": [ {\"build\": \"${{env.BUILD_NAME}}/${{env.BUILD_ID}}\", \"includeDeps\":\"true\", \"project\":\"${{env.PROJECT_KEY}}\"} ] }"  > ${{env.RBv2_SPEC_JSON}}
-          cat ${{env.RBv2_SPEC_JSON}}
-
-      - name: "RLM: RBv2 Create NEW"
-        run: |
-          jf rbc ${{env.RBV2_BUNDLE_NAME}} ${{env.BUILD_ID}} --sync=true --signing-key=${{secrets.RBV2_SIGNING_KEY}} --spec=${{env.RBv2_SPEC_JSON}} --project=${{env.PROJECT_KEY}}
-
-      - name: "RLM: Xray Indexing"
-        run: |
-            jf xr curl "/api/v1/binMgr/release_bundle_v2" -H 'Content-Type: application/json' -d "{\"names\": [\"${{env.RBV2_BUNDLE_NAME}}\"] }"
 
       # ref: https://docs.jfrog-applications.jfrog.io/jfrog-applications/jfrog-cli/binaries-management-with-jfrog-artifactory/release-lifecycle-management#distribute-a-release-bundle-v2
       - name: "RBv2 Distribute to SaaS Artifactory and edges"
@@ -345,7 +300,7 @@ jobs:
 
   gradleDownloadRBv2FromSaasEdge:
     name: "Gradle: Download RBv2 from SaaS ${{vars.JF_EDGE_NAME}} Edge"
-    needs: gradleRBDistribution
+    needs: gradleRBv2Distribution
     runs-on: ubuntu-latest
     continue-on-error: true
     defaults:
