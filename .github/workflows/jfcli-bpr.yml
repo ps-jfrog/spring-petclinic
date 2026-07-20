@@ -114,27 +114,7 @@ jobs:
           driver: docker-container
           platforms: ${{env.DOCKER_BUILDX_PLATFORMS}} # linux/amd64,linux/arm64 # ref: https://docs.docker.com/reference/cli/docker/buildx/create/#platform
 
-      - name: "Docker: Summary "
-        run: |
-          echo "# :frog: :ship: Docker: Summary :pushpin:" >> $GITHUB_STEP_SUMMARY
-          echo " " >> $GITHUB_STEP_SUMMARY
-          echo " " >> $GITHUB_STEP_SUMMARY
-          echo " - Installed JFrog CLI [$(jf --version)](https://jfrog.com/getcli/) and Java [${{env.JAVA_DISTRIBUTION}}](https://github.com/actions/setup-java) v${{env.JAVA_VERSION}} " >> $GITHUB_STEP_SUMMARY
-          echo "    - $(jf --version) " >> $GITHUB_STEP_SUMMARY
-          echo "    - $(mvn -v) " >> $GITHUB_STEP_SUMMARY
-          echo "    - $(docker -v) " >> $GITHUB_STEP_SUMMARY
-          echo " - Docker buildx configured with platforms: [${{env.DOCKER_BUILDX_PLATFORMS}}](https://docs.docker.com/reference/cli/docker/buildx/create/#platform) " >> $GITHUB_STEP_SUMMARY
-          echo " - Configured the JFrog Cli and Docker login with SaaS Artifactory OIDC integration  " >> $GITHUB_STEP_SUMMARY
-          echo " " >> $GITHUB_STEP_SUMMARY
-          echo " - Variables info" >> $GITHUB_STEP_SUMMARY
-          echo "    - ID: ${{env.BUILD_ID}} " >> $GITHUB_STEP_SUMMARY
-          echo "    - Commit Code: ${{env.SHORT_COMMIT_CODE}} " >> $GITHUB_STEP_SUMMARY
-          echo "    - Build Name: ${{env.BUILD_NAME}} " >> $GITHUB_STEP_SUMMARY
-          echo "    - Docker Repo URL: ${{env.RT_REPO_VIRTUAL}}" >> $GITHUB_STEP_SUMMARY
-          echo "    - Docker Image: ${{env.RT_REPO_DOCKER_IMG}}" >> $GITHUB_STEP_SUMMARY
-          echo "    - Docker URL: ${{env.RT_REPO_DOCKER_URL}}" >> $GITHUB_STEP_SUMMARY
-          echo " " >> $GITHUB_STEP_SUMMARY
-
+      
       # Package
       - name: "Curation-Audit: docker image" # https://docs.jfrog-applications.jfrog.io/jfrog-applications/jfrog-cli/cli-for-jfrog-security/cli-for-jfrog-curation
         timeout-minutes: 15    # ref https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#jobsjob_idstepstimeout-minutes
@@ -574,23 +554,6 @@ jobs:
           pwd
           tree .
 
-      - name: "Gradle: summary"
-        run: |
-          echo "# :frog: Gradle: Summary :pushpin:" >> $GITHUB_STEP_SUMMARY
-          echo " " >> $GITHUB_STEP_SUMMARY
-          echo " " >> $GITHUB_STEP_SUMMARY
-          echo " - Installed JFrog CLI [${jfcliv}](https://jfrog.com/getcli/) and Java [${{env.JAVA_DISTRIBUTION}}](https://github.com/actions/setup-java) v${{env.JAVA_VERSION}} " >> $GITHUB_STEP_SUMMARY
-          echo "    - $(jf --version) " >> $GITHUB_STEP_SUMMARY
-          # echo "    - $(gradle -v) " >> $GITHUB_STEP_SUMMARY
-          echo " - Configured the JFrog Cli with SaaS Artifactory OIDC integration  " >> $GITHUB_STEP_SUMMARY
-          echo " " >> $GITHUB_STEP_SUMMARY
-          echo " - Variables info" >> $GITHUB_STEP_SUMMARY
-          echo "    - ID: ${{env.BUILD_ID}} " >> $GITHUB_STEP_SUMMARY
-          echo "    - Build Name: ${{env.BUILD_NAME}} " >> $GITHUB_STEP_SUMMARY
-          echo "    - Project Key: ${{env.PROJECT_KEY}} " >> $GITHUB_STEP_SUMMARY
-          echo "    - Gradle Repo URL: ${{env.RT_REPO_VIRTUAL}}" >> $GITHUB_STEP_SUMMARY
-          echo " " >> $GITHUB_STEP_SUMMARY
-
       # Package   https://docs.jfrog-applications.jfrog.io/jfrog-applications/jfrog-cli/binaries-management-with-jfrog-artifactory/package-managers-integration#running-gradle-builds
       - name: "Package: Create Build" 
         run: |
@@ -692,4 +655,52 @@ jobs:
           path: ${{env.METADATA_FILE}}
           retention-days: 7
 
- 
+      - name: "Clone VCS"
+        uses: actions/checkout@v6 # ref: https://github.com/actions/checkout
+
+      - name: "setUp JDK provider = ${{env.JAVA_DISTRIBUTION}} with ver = ${{env.JAVA_VERSION}}"
+        uses: actions/setup-java@v5  # ref https://github.com/actions/setup-java
+        with:
+          distribution: ${{env.JAVA_DISTRIBUTION}} # temurin
+          java-version: ${{env.JAVA_VERSION}}  # 25
+
+      - name: "Create ENV variables"
+        run: |
+          echo "ARTIFACT_NAME=$(mvn help:evaluate -Dexpression=project.artifactId -q -DforceStdout)" >> $GITHUB_ENV
+          echo "ARTIFACT_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)" >> $GITHUB_ENV
+          echo "SHORT_COMMIT_CODE=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          echo "LONG_COMMIT_CODE=$(git rev-parse HEAD)" >> $GITHUB_ENV
+          echo "TODAYS_DATE=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
+
+      - name: "Pipeline Summary"
+        run: |
+          echo "# :frog: :ship: BPR: Package - Pipeline Summary :pushpin:" >> $GITHUB_STEP_SUMMARY
+          echo " " >> $GITHUB_STEP_SUMMARY
+          echo " " >> $GITHUB_STEP_SUMMARY
+          echo " - Installed JFrog CLI [$(jf --version)](https://jfrog.com/getcli/) and Java [${{env.JAVA_DISTRIBUTION}}](https://github.com/actions/setup-java) v${{env.JAVA_VERSION}} " >> $GITHUB_STEP_SUMMARY
+          echo "    - $(jf --version) " >> $GITHUB_STEP_SUMMARY
+          echo "    - $(mvn -v) " >> $GITHUB_STEP_SUMMARY
+          echo "    - $(docker -v) " >> $GITHUB_STEP_SUMMARY
+          echo "    - Gradle version: $(./gradlew -v | grep "Gradle" | awk '{print $2}') " >> $GITHUB_STEP_SUMMARY
+          echo " " >> $GITHUB_STEP_SUMMARY
+          echo " - Configured the JFrog Cli with SaaS Artifactory OIDC integration  " >> $GITHUB_STEP_SUMMARY
+          echo " " >> $GITHUB_STEP_SUMMARY
+          echo " - Variables info" >> $GITHUB_STEP_SUMMARY
+          echo "    - JPD URL: [https://${{vars.JF_NAME}}.jfrog.io](https://${{vars.JF_NAME}}.jfrog.io) " >> $GITHUB_STEP_SUMMARY
+          echo "    - Commit Code (Long): ${{env.LONG_COMMIT_CODE}} " >> $GITHUB_STEP_SUMMARY
+          echo "    - Commit Code (Short): ${{env.SHORT_COMMIT_CODE}} " >> $GITHUB_STEP_SUMMARY
+          echo "    - Project Key: [${{env.PROJECT_KEY}}](https://${{vars.JF_NAME}}.jfrog.io/ui/admin/projects/overview?projectKey=${{env.PROJECT_KEY}}) " >> $GITHUB_STEP_SUMMARY
+          echo "    - Build Name: [${{env.BUILD_NAME}}](https://${{vars.JF_NAME}}.jfrog.io/ui/builds/?projectKey=${{env.PROJECT_KEY}}) " >> $GITHUB_STEP_SUMMARY
+          echo "    - Project repositories: [Repositories Info](https://${{vars.JF_NAME}}.jfrog.io/ui/admin/repositories?projectKey=${{env.PROJECT_KEY}}) " >> $GITHUB_STEP_SUMMARY
+          echo "    - Docker Info: " >> $GITHUB_STEP_SUMMARY
+          echo "      - Build ID: dkr-${{github.run_number}} " >> $GITHUB_STEP_SUMMARY
+          echo "      - Repo Virtual URL: [bpr-spring-petclinic-docker-virtual](https://${{vars.JF_NAME}}.jfrog.io/ui/admin/repositories/virtual/bpr-spring-petclinic-docker-virtual/edit?projectKey=${{env.PROJECT_KEY}}) " >> $GITHUB_STEP_SUMMARY
+          echo "    - Maven Info: " >> $GITHUB_STEP_SUMMARY
+          echo "      - Build ID: mvn-${{github.run_number}} " >> $GITHUB_STEP_SUMMARY
+          echo "      - Repo Virtual URL: [bpr-spring-petclinic-mvn-virtual](https://${{vars.JF_NAME}}.jfrog.io/ui/admin/repositories/virtual/bpr-spring-petclinic-mvn-virtual/edit?projectKey=${{env.PROJECT_KEY}}) " >> $GITHUB_STEP_SUMMARY
+          echo "    - Gradle Info: " >> $GITHUB_STEP_SUMMARY
+          echo "      - Build ID: gdl-${{github.run_number}} " >> $GITHUB_STEP_SUMMARY
+          echo "      - Repo Virtual URL: [bpr-spring-petclinic-gradle-virtual](https://${{vars.JF_NAME}}.jfrog.io/ui/admin/repositories/virtual/bpr-spring-petclinic-gradle-virtual/edit?projectKey=${{env.PROJECT_KEY}}) " >> $GITHUB_STEP_SUMMARY
+          echo " " >> $GITHUB_STEP_SUMMARY
+          echo " " >> $GITHUB_STEP_SUMMARY
+

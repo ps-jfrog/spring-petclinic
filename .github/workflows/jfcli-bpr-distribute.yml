@@ -1,4 +1,4 @@
-name: "BPR: RB Distribution"
+name: "BPR: RBv1 Distribute"
 on: 
   workflow_run:
     workflows: 
@@ -16,12 +16,14 @@ permissions:
   artifact-metadata: write
 env:
   JF_RT_URL: "https://${{vars.JF_NAME}}.jfrog.io"
-  RBV2_BUNDLE_NAME: "rbv2-spring-petclinic"
   BUILD_NAME: "spring-petclinic" # spring-petclinic-3.5.0-SNAPSHOT.jar
+  RBv1_BUNDLE_NAME: "rbv1-spring-petclinic"
   PROJECT_KEY: "ps-build-promote"
   JOB_SUMMARY: false
   CLI_LOG_LEVEL: DEBUG # DEBUG, INFO, WARN, ERROR
   JAVA_DISTRIBUTION: 'temurin'
+  RBV1_GPG_PASSPHRASE: "${{secrets.RBV1_GPG_PASSPHRASE}}"
+  RBv1_SPEC_JSON: "rbv1-spec-info.json" 
   JAVA_VERSION: '25'
   #RBV2_SIGNING_KEY: "${{secrets.RBV2_SIGNING_KEY}}" # ref https://jfrog.com/help/r/jfrog-artifactory-documentation/create-signing-keys-for-release-bundles-v2
   DEFAULT_WORKSPACE: "${{github.workspace}}"  # /home/runner/work/spring-petclinic/spring-petclinic
@@ -52,8 +54,8 @@ jobs:
           echo "package_run_number=${N}" >> "$GITHUB_OUTPUT"
           echo "Resolved BPR: Package run_number=${N} (trigger=${{ github.event.workflow_run.name }})"
 
-  dockerRBDistribution:
-    name: "Docker: RB Distribution"
+  dockerRBv1Distribution:
+    name: "Docker: RBv1 Distribution"
     needs: resolvePackageRun
     runs-on: ubuntu-latest
     env:
@@ -93,7 +95,7 @@ jobs:
       - name: "RBv2 Distribute to SaaS Artifactory and edges"
         continue-on-error: true
         run: |
-          jf rbd ${{env.RBV2_BUNDLE_NAME}} ${{env.BUILD_ID}} --sync=true --create-repo=true
+          jf rbd ${{env.RBV2_BUNDLE_NAME}} ${{env.BUILD_ID}} --sync=true --create-repo=true --site=${{vars.JF_EDGE_NAME}} --project=${{env.PROJECT_KEY}}
 
       - name: "Query Distribution status"  # https://psazuse.jfrog.io/lifecycle/api/v2/distribution/trackers/spring-petclinic/ga-49
         run: |
@@ -120,9 +122,9 @@ jobs:
           done
           echo " " >> $GITHUB_STEP_SUMMARY
 
-  dockerDownloadRBv2FromSaasEdge:
-    name: "Docker: Download RBv2 from SaaS ${{vars.JF_EDGE_NAME}} Edge"
-    needs: dockerRBDistribution
+  dockerDownloadRBv1FromSaasEdge:
+    name: "Docker: Download RBv1 from SaaS ${{vars.JF_EDGE_NAME}} Edge"
+    needs: dockerRBv1Distribution
     runs-on: ubuntu-latest
     continue-on-error: true
     defaults:
@@ -147,10 +149,19 @@ jobs:
         run: |
           jf config show
 
+      - name: "Download Build from SaaS Edge"
+        run: |
+          jf rt dl --build-name=${{env.BUILD_NAME}} --build-number=${{env.BUILD_ID}} --detailed-summary=true --threads=100 --project=${{env.PROJECT_KEY}}
+
       # refer: https://docs.jfrog-applications.jfrog.io/jfrog-applications/jfrog-cli/binaries-management-with-jfrog-artifactory/release-lifecycle-management#download-release-bundle-v2-content
       - name: "Download RBv2 from SaaS Edge"
         run: |
-          jf rt dl --bundle ${{env.BUILD_NAME}}/${{env.BUILD_ID}} --detailed-summary=true --threads=100
+          jf rt dl --bundle ${{env.RBV2_BUNDLE_NAME}}/${{env.BUILD_ID}} --detailed-summary=true --threads=100 --project=${{env.PROJECT_KEY}}
+
+      # refer: https://docs.jfrog-applications.jfrog.io/jfrog-applications/jfrog-cli/binaries-management-with-jfrog-artifactory/release-lifecycle-management#download-release-bundle-v2-content
+      - name: "Download RBv2 from SaaS Edge"
+        run: |
+          jf rt dl --bundle ${{env.RBV2_BUNDLE_NAME}}/${{env.BUILD_ID}} --detailed-summary=true --threads=100 --project=${{env.PROJECT_KEY}}
 
       - name: "Info list"
         run: |
@@ -163,14 +174,13 @@ jobs:
           echo "  - Download RBv2 from Edge [${{vars.JF_EDGE_NAME}}](${{env.JF_EDGE_URL}}) " >> $GITHUB_STEP_SUMMARY
           echo " " >> $GITHUB_STEP_SUMMARY
 
-  mvnRBDistribution:
-    name: "MVN: RB Distribution"
+  mvnRBv1Distribution:
+    name: "MVN: RBv1 Distribution"
     needs: resolvePackageRun
     runs-on: ubuntu-latest
     env:
       BUILD_ID: "mvn-${{ needs.resolvePackageRun.outputs.package_run_number }}"
-      RBV2_BUNDLE_ID: "mvn-${{ needs.resolvePackageRun.outputs.package_run_number }}"
-      RBv2_SPEC_JSON: "rbv2-spec-info.json"
+      RT_REPO_LOCAL_PROD: "bpr-spring-petclinic-mvn-prod-local"
     defaults:
        run:
          working-directory: "${{env.DEFAULT_WORKSPACE}}"
@@ -187,53 +197,60 @@ jobs:
           oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
           disable-job-summary: ${{env.JOB_SUMMARY}}
 
-      - name: "RLM: RBv2 spec - create"
+      - name: "RLM: RBv1 spec - create"
         run: |
-          echo "{ \"files\": [ {\"build\": \"${{env.BUILD_NAME}}/${{env.BUILD_ID}}\", \"includeDeps\":\"true\", \"project\":\"${{env.PROJECT_KEY}}\"} ] }"  > ${{env.RBv2_SPEC_JSON}}
+          cat > "${{env.RBv1_SPEC_JSON}}" <<EOF
+          {
+            "files": [
+              {
+                "pattern": "${{env.RT_REPO_LOCAL_PROD}}/org/springframework/samples/spring-petclinic/*",
+                "props": "build.name=${{env.BUILD_NAME}};build.number=${{env.BUILD_ID}}"
+              }
+            ]
+          }
+          EOF
           cat ${{env.RBv2_SPEC_JSON}}
 
-      - name: "RLM: RBv2 Create NEW"
+        # ref: https://docs.jfrog.com/artifactory/docs/distribution-through-cli#creating-a-release-bundle
+      - name: "Sign RBv1 bundle"
         run: |
-          jf rbc ${{env.RBV2_BUNDLE_NAME}} ${{env.BUILD_ID}} --sync=true --signing-key=${{secrets.RBV2_SIGNING_KEY}} --spec=${{env.RBv2_SPEC_JSON}} --project=${{env.PROJECT_KEY}}
+          jf ds rbc "${{env.RBv1_BUNDLE_NAME}}" "${{env.BUILD_ID}}" --spec="${{env.RBv1_SPEC_JSON}}" --sign --passphrase="${{env.RBV1_GPG_PASSPHRASE}}" --detailed-summary
 
-      - name: "RLM: Xray Indexing"
+        # ref: https://docs.jfrog.com/artifactory/docs/distribution-through-cli#distributing-a-release-bundle
+      - name: "Distribute RBv1 to Edge"
         run: |
-            jf xr curl "/api/v1/binMgr/release_bundle_v2" -H 'Content-Type: application/json' -d "{\"names\": [\"${{env.RBV2_BUNDLE_NAME}}\"] }"
-
-      # ref: https://docs.jfrog-applications.jfrog.io/jfrog-applications/jfrog-cli/binaries-management-with-jfrog-artifactory/release-lifecycle-management#distribute-a-release-bundle-v2
-      - name: "RBv2 Distribute to SaaS Artifactory and edges"
-        continue-on-error: true
-        run: |
-          jf rbd ${{env.RBV2_BUNDLE_NAME}} ${{env.BUILD_ID}} --sync=true --create-repo=true
-
-      - name: "Query Distribution status"  # https://psazuse.jfrog.io/lifecycle/api/v2/distribution/trackers/spring-petclinic/ga-49
-        run: |
-            jf rt curl "/lifecycle/api/v2/distribution/trackers/${{env.BUILD_NAME}}/${{env.BUILD_ID}}"
+          jf ds rbd "${{env.RBv1_BUNDLE_NAME}}" "${{env.BUILD_ID}}" --sync --create-repo --max-wait-minutes=30 --site="${{vars.JF_EDGE_NAME}}"
 
       - name: "Optional Saas Artifactory summary"
         continue-on-error: true
         env:
           CURL_URL: "${{env.JF_RT_URL}}/lifecycle/api/v2/distribution/trackers/${{env.BUILD_NAME}}/${{env.BUILD_ID}}"
+          RB1_DISTRIBUTE_RESP_JSON: "RB1_DISTRIBUTE-${{env.BUILD_ID}}.json"
         run: |
           echo "# :frog: MVN DL 📦 " >> $GITHUB_STEP_SUMMARY
           echo "  - Download RBv2 from Artifactory [${{env.JF_RT_URL}}](${{env.JF_RT_URL}}) to " >> $GITHUB_STEP_SUMMARY
-          echo "  - Rlease Bundle name: ${{env.RBV2_BUNDLE_NAME}} to " >> $GITHUB_STEP_SUMMARY
-          echo "  - Rlease Bundle ID: ${{env.RBV2_BUNDLE_ID}} to " >> $GITHUB_STEP_SUMMARY
+          echo "  - Rlease Bundle (RBv1) name: ${{env.RBV1_BUNDLE_NAME}} to " >> $GITHUB_STEP_SUMMARY
+          echo "  - Rlease Bundle (RBv1) ID: ${{env.BUILD_ID}} to " >> $GITHUB_STEP_SUMMARY
           echo "  - Build name: ${{env.BUILD_NAME}} to " >> $GITHUB_STEP_SUMMARY
           echo "  - Build ID: ${{env.BUILD_ID}} to " >> $GITHUB_STEP_SUMMARY
-          RB2_DISTRIBUTE_RESP=$(curl -v -G ${{env.CURL_URL}} -H 'Content-Type:  application/json' -H "Authorization: Bearer ${{steps.setup-cli.outputs.oidc-token}}")
-          echo $RB2_DISTRIBUTE_RESP > RB2_DISTRIBUTE-${{env.BUILD_ID}}.json
-          cat RB2_DISTRIBUTE-${{env.BUILD_ID}}.json 
-          items=$(echo "$RB2_DISTRIBUTE_RESP" | jq -c -r '.[] .targets[]')
-          for item in ${items[@]}; do
-            echo $item
-            echo "   - [${item}.jfrog.io](https://${item}.jfrog.io) " >> $GITHUB_STEP_SUMMARY
+          
+          curl --request GET --url "https://${{env.JF_RT_URL}}/distribution/api/v1/release_bundle/${{env.RBV1_BUNDLE_NAME}}/${{env.BUILD_ID}}/distribution" --header 'Content-Type: application/json' --header "Authorization: Bearer ${{steps.setup-cli.outputs.oidc-token}}" > "{{env.RB1_DISTRIBUTE_RESP_JSON}}"
+          cat "${{env.RB1_DISTRIBUTE_RESP_JSON}}"
+          echo "  - Artifacts distributed to the below sites " >> $GITHUB_STEP_SUMMARY
+          items=$(jq -c -r '.[].sites[].target_artifactory.name' "${{env.RB1_DISTRIBUTE_RESP_JSON}}")
+          for item in ${items}; do
+            echo "${item}"
+            if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
+              echo "   - [${item}.jfrog.io](https://${item}.jfrog.io)/ui/release-bundles/target/${{env.RBV1_BUNDLE_NAME}}" >> "${GITHUB_STEP_SUMMARY}"
+            fi
           done
+
+          echo " " >> $GITHUB_STEP_SUMMARY
           echo " " >> $GITHUB_STEP_SUMMARY
 
-  mvnDownloadRBv2FromSaasEdge:
-    name: "MVN: Download RBv2 from SaaS ${{vars.JF_EDGE_NAME}} Edge"
-    needs: mvnRBDistribution
+  mvnDownloadRBv1FromSaasEdge:
+    name: "MVN: Download RBv1 from SaaS ${{vars.JF_EDGE_NAME}} Edge"
+    needs: mvnRBv1Distribution
     runs-on: ubuntu-latest
     continue-on-error: true
     defaults:
@@ -258,10 +275,14 @@ jobs:
         run: |
           jf config show
 
+      - name: "Download Build from SaaS Edge"
+        run: |
+          jf rt dl --build-name=${{env.BUILD_NAME}} --build-number=${{env.BUILD_ID}} --detailed-summary=true --threads=100 --project=${{env.PROJECT_KEY}}
+
       # refer: https://docs.jfrog-applications.jfrog.io/jfrog-applications/jfrog-cli/binaries-management-with-jfrog-artifactory/release-lifecycle-management#download-release-bundle-v2-content
       - name: "Download RBv2 from SaaS Edge"
         run: |
-          jf rt dl --bundle ${{env.BUILD_NAME}}/${{env.BUILD_ID}} --detailed-summary=true --threads=100
+          jf rt dl --bundle ${{env.RBV2_BUNDLE_NAME}}/${{env.BUILD_ID}} --detailed-summary=true --threads=100 --project=${{env.PROJECT_KEY}}
 
       - name: "Info list"
         run: |
@@ -274,9 +295,8 @@ jobs:
           echo "  - Download RBv2 from Edge [${{vars.JF_EDGE_NAME}}](${{env.JF_EDGE_URL}}) " >> $GITHUB_STEP_SUMMARY
           echo " " >> $GITHUB_STEP_SUMMARY
 
-
-  gradleRBDistribution:
-    name: "Gradle: RB Distribution"
+  gradleRBv1Distribution:
+    name: "Gradle: RBv1 Distribution"
     needs: resolvePackageRun
     runs-on: ubuntu-latest
     env:
@@ -316,7 +336,7 @@ jobs:
       - name: "RBv2 Distribute to SaaS Artifactory and edges"
         continue-on-error: true
         run: |
-          jf rbd ${{env.RBV2_BUNDLE_NAME}} ${{env.BUILD_ID}} --sync=true --create-repo=true
+          jf rbd ${{env.RBV2_BUNDLE_NAME}} ${{env.BUILD_ID}} --sync=true --create-repo=true --site=${{vars.JF_EDGE_NAME}} --project=${{env.PROJECT_KEY}}
 
       - name: "Query Distribution status"  # https://psazuse.jfrog.io/lifecycle/api/v2/distribution/trackers/spring-petclinic/ga-49
         run: |
@@ -343,9 +363,9 @@ jobs:
           done
           echo " " >> $GITHUB_STEP_SUMMARY
 
-  gradleDownloadRBv2FromSaasEdge:
-    name: "Gradle: Download RBv2 from SaaS ${{vars.JF_EDGE_NAME}} Edge"
-    needs: gradleRBDistribution
+  gradleDownloadRBv1FromSaasEdge:
+    name: "Gradle: Download RBv1 from SaaS ${{vars.JF_EDGE_NAME}} Edge"
+    needs: gradleRBv1Distribution
     runs-on: ubuntu-latest
     continue-on-error: true
     defaults:
@@ -370,10 +390,14 @@ jobs:
         run: |
           jf config show
 
+      - name: "Download Build from SaaS Edge"
+        run: |
+          jf rt dl --build-name=${{env.BUILD_NAME}} --build-number=${{env.BUILD_ID}} --detailed-summary=true --threads=100 --project=${{env.PROJECT_KEY}}
+
       # refer: https://docs.jfrog-applications.jfrog.io/jfrog-applications/jfrog-cli/binaries-management-with-jfrog-artifactory/release-lifecycle-management#download-release-bundle-v2-content
       - name: "Download RBv2 from SaaS Edge"
         run: |
-          jf rt dl --bundle ${{env.BUILD_NAME}}/${{env.BUILD_ID}} --detailed-summary=true --threads=100
+          jf rt dl --bundle ${{env.RBV2_BUNDLE_NAME}}/${{env.BUILD_ID}} --detailed-summary=true --threads=100 --project=${{env.PROJECT_KEY}}
 
       - name: "Info list"
         run: |
