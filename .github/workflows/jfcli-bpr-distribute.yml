@@ -84,7 +84,7 @@ jobs:
           {
             "files": [
               {
-                "pattern": "${{env.RT_REPO_LOCAL_PROD}}/*",
+                "pattern": "${{env.RT_REPO_LOCAL_PROD}}/spring-petclinic/*",
                 "props": "build.name=${{env.BUILD_NAME}};build.number=${{env.BUILD_ID}}"
               }
             ]
@@ -301,7 +301,6 @@ jobs:
     env:
       BUILD_ID: "gdl-${{ needs.resolvePackageRun.outputs.package_run_number }}"
       RT_REPO_LOCAL_PROD: "bpr-spring-petclinic-gradle-prod-fed"
-      RBv2_SPEC_JSON: "rbv2-spec-info.json"
     defaults:
        run:
          working-directory: "${{env.DEFAULT_WORKSPACE}}"
@@ -348,8 +347,8 @@ jobs:
           CURL_URL: "${{env.JF_RT_URL}}/lifecycle/api/v2/distribution/trackers/${{env.BUILD_NAME}}/${{env.BUILD_ID}}"
           RB1_DISTRIBUTE_RESP_JSON: "RB1_DISTRIBUTE-${{env.BUILD_ID}}.json"
         run: |
-          echo "# :frog: MVN DL 📦 " >> $GITHUB_STEP_SUMMARY
-          echo "  - Download RBv2 from Artifactory [${{env.JF_RT_URL}}](${{env.JF_RT_URL}}) to " >> $GITHUB_STEP_SUMMARY
+          echo "# :frog: Gradle DL 📦 " >> $GITHUB_STEP_SUMMARY
+          echo "  - Download RBv1 from Artifactory [${{env.JF_RT_URL}}](${{env.JF_RT_URL}}) to " >> $GITHUB_STEP_SUMMARY
           echo "  - Rlease Bundle (RBv1) name: ${{env.RBV1_BUNDLE_NAME}} to " >> $GITHUB_STEP_SUMMARY
           echo "  - Rlease Bundle (RBv1) ID: ${{env.BUILD_ID}} to " >> $GITHUB_STEP_SUMMARY
           echo "  - Build name: ${{env.BUILD_NAME}} to " >> $GITHUB_STEP_SUMMARY
