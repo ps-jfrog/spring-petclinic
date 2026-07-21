@@ -1,4 +1,4 @@
-name: "BPR: RBv1 Distribute"
+name: "BPR: Distribute"
 on: 
   workflow_run:
     workflows: 
@@ -23,7 +23,7 @@ env:
   CLI_LOG_LEVEL: DEBUG # DEBUG, INFO, WARN, ERROR
   JAVA_DISTRIBUTION: 'temurin'
   RBV1_GPG_PASSPHRASE: "${{secrets.RBV1_GPG_PASSPHRASE}}"
-  RBv1_SPEC_JSON: "rbv1-spec-info.json" 
+  RBv1_SPEC_JSON: "rbv1-spec-info.json"
   JAVA_VERSION: '25'
   #RBV2_SIGNING_KEY: "${{secrets.RBV2_SIGNING_KEY}}" # ref https://jfrog.com/help/r/jfrog-artifactory-documentation/create-signing-keys-for-release-bundles-v2
   DEFAULT_WORKSPACE: "${{github.workspace}}"  # /home/runner/work/spring-petclinic/spring-petclinic
@@ -61,7 +61,6 @@ jobs:
     env:
       BUILD_ID: "dkr-${{ needs.resolvePackageRun.outputs.package_run_number }}"
       RT_REPO_LOCAL_PROD: "bpr-spring-petclinic-docker-prod-local"
-      RBv2_SPEC_JSON: "rbv2-spec-info.json"
     defaults:
        run:
          working-directory: "${{env.DEFAULT_WORKSPACE}}"
@@ -78,63 +77,73 @@ jobs:
           oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
           disable-job-summary: ${{env.JOB_SUMMARY}}
 
-      - name: "RLM: RBv1 spec - create"
+      # Multi-arch images: match list.manifest.json; Distribution includes manifests + layers.
+      # ref: https://docs.jfrog.com/artifactory/docs/create-release-bundles-v1#include-a-list-of-manifests-in-a-release-bundle
+      - name: "RBv1: file spec (docker list.manifest)"
         run: |
           cat > "${{env.RBv1_SPEC_JSON}}" <<EOF
           {
             "files": [
               {
-                "pattern": "${{env.RT_REPO_LOCAL_PROD}}/spring-petclinic/*",
-                "props": "build.name=${{env.BUILD_NAME}};build.number=${{env.BUILD_ID}}"
+                "pattern": "${{env.RT_REPO_LOCAL_PROD}}/spring-petclinic/${{env.BUILD_ID}}/list.manifest.json"
               }
             ]
           }
           EOF
-          cat ${{env.RBv2_SPEC_JSON}}
+          echo "RBv1 file spec:"
+          cat "${{env.RBv1_SPEC_JSON}}"
+          COUNT=$(JFROG_CLI_LOG_LEVEL=ERROR jf rt search "${{env.RT_REPO_LOCAL_PROD}}/spring-petclinic/${{env.BUILD_ID}}/list.manifest.json" --count)
+          echo "Matched list.manifest.json count=${COUNT}"
+          [[ "${COUNT}" -ge 1 ]] || { echo "::error::No docker list.manifest.json in ${{env.RT_REPO_LOCAL_PROD}} for ${{env.BUILD_ID}}"; exit 1; }
 
         # ref: https://docs.jfrog.com/artifactory/docs/distribution-through-cli#creating-a-release-bundle
-      - name: "Sign RBv1 bundle"
+      - name: "RBv1: create and sign"
         run: |
-          jf ds rbc "${{env.RBv1_BUNDLE_NAME}}" "${{env.BUILD_ID}}" --spec="${{env.RBv1_SPEC_JSON}}" --sign --passphrase="${{env.RBV1_GPG_PASSPHRASE}}" --detailed-summary
+          jf ds rbc "${{env.RBv1_BUNDLE_NAME}}" "${{env.BUILD_ID}}" \
+            --spec="${{env.RBv1_SPEC_JSON}}" \
+            --sign \
+            --passphrase="${{env.RBV1_GPG_PASSPHRASE}}" \
+            --detailed-summary
 
         # ref: https://docs.jfrog.com/artifactory/docs/distribution-through-cli#distributing-a-release-bundle
-      - name: "Distribute RBv1 to Edge"
+      - name: "RBv1: distribute to Edge"
         run: |
-          jf ds rbd "${{env.RBv1_BUNDLE_NAME}}" "${{env.BUILD_ID}}" --sync --create-repo --max-wait-minutes=30 --site="${{vars.JF_EDGE_NAME}}"
+          jf ds rbd "${{env.RBv1_BUNDLE_NAME}}" "${{env.BUILD_ID}}" \
+            --sync \
+            --create-repo \
+            --max-wait-minutes=30 \
+            --site="${{vars.JF_EDGE_NAME}}"
 
-      - name: "Optional Saas Artifactory summary"
+      - name: "Optional: RBv1 distribution summary"
         continue-on-error: true
         env:
-          CURL_URL: "${{env.JF_RT_URL}}/lifecycle/api/v2/distribution/trackers/${{env.BUILD_NAME}}/${{env.BUILD_ID}}"
           RB1_DISTRIBUTE_RESP_JSON: "RB1_DISTRIBUTE-${{env.BUILD_ID}}.json"
         run: |
-          echo "# :frog: Docker DL 📦 " >> $GITHUB_STEP_SUMMARY
-          echo "  - Download RBv2 from Artifactory [${{env.JF_RT_URL}}](${{env.JF_RT_URL}}) to " >> $GITHUB_STEP_SUMMARY
-          echo "  - Rlease Bundle (RBv1) name: ${{env.RBV1_BUNDLE_NAME}} to " >> $GITHUB_STEP_SUMMARY
-          echo "  - Rlease Bundle (RBv1) ID: ${{env.BUILD_ID}} to " >> $GITHUB_STEP_SUMMARY
-          echo "  - Build name: ${{env.BUILD_NAME}} to " >> $GITHUB_STEP_SUMMARY
-          echo "  - Build ID: ${{env.BUILD_ID}} to " >> $GITHUB_STEP_SUMMARY
-          
-          curl --request GET --url "https://${{env.JF_RT_URL}}/distribution/api/v1/release_bundle/${{env.RBV1_BUNDLE_NAME}}/${{env.BUILD_ID}}/distribution" --header 'Content-Type: application/json' --header "Authorization: Bearer ${{steps.setup-cli.outputs.oidc-token}}" > "{{env.RB1_DISTRIBUTE_RESP_JSON}}"
-          cat "${{env.RB1_DISTRIBUTE_RESP_JSON}}"
-          echo "  - Artifacts distributed to the below sites " >> $GITHUB_STEP_SUMMARY
+          {
+            echo "# :frog: Docker RBv1 distribute"
+            echo "  - Source: [${{env.JF_RT_URL}}](${{env.JF_RT_URL}})"
+            echo "  - Release Bundle (RBv1): \`${{env.RBv1_BUNDLE_NAME}}\` / \`${{env.BUILD_ID}}\`"
+            echo "  - Build: \`${{env.BUILD_NAME}}\` / \`${{env.BUILD_ID}}\`"
+            echo "  - Edge site: \`${{vars.JF_EDGE_NAME}}\`"
+            echo "  - Sites:"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+          curl --silent --show-error --request GET \
+            --url "${{env.JF_RT_URL}}/distribution/api/v1/release_bundle/${{env.RBv1_BUNDLE_NAME}}/${{env.BUILD_ID}}/distribution" \
+            --header 'Content-Type: application/json' \
+            --header "Authorization: Bearer ${{steps.setup-cli.outputs.oidc-token}}" \
+            > "${{env.RB1_DISTRIBUTE_RESP_JSON}}"
 
           jq . "${{env.RB1_DISTRIBUTE_RESP_JSON}}"
           while IFS=$'\t' read -r target_artifactory_name status; do
             [[ -z "${target_artifactory_name}" ]] && continue
             echo "   - ${target_artifactory_name}.jfrog.io  status=${status}"
-            if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
-              echo "   - [${target_artifactory_name}.jfrog.io](](https://${item}.jfrog.io)/ui/release-bundles/target/${{env.RBV1_BUNDLE_NAME}})  : ${status}" >> "${GITHUB_STEP_SUMMARY}"
-            fi
-          done < <(jq -r '.[].sites[] | [.target_artifactory.name, .status] | @tsv' "${RB1_DISTRIBUTE_RESP_JSON}")
-
-          echo " " >> $GITHUB_STEP_SUMMARY
-          echo " " >> $GITHUB_STEP_SUMMARY
-
+            echo "   - [${target_artifactory_name}.jfrog.io](https://${target_artifactory_name}.jfrog.io/ui/release-bundles/target/${{env.RBv1_BUNDLE_NAME}}) : ${status}" >> "${GITHUB_STEP_SUMMARY}"
+          done < <(jq -r '.[].sites[] | [.target_artifactory.name, .status] | @tsv' "${{env.RB1_DISTRIBUTE_RESP_JSON}}")
 
   dockerDownloadRBv1FromSaasEdge:
     name: "Docker: Download RBv1 from SaaS ${{vars.JF_EDGE_NAME}} Edge"
-    needs: dockerRBv1Distribution
+    needs: [resolvePackageRun, dockerRBv1Distribution]
     runs-on: ubuntu-latest
     continue-on-error: true
     defaults:
@@ -142,37 +151,37 @@ jobs:
          working-directory: "${{env.DEFAULT_WORKSPACE}}"
     env:
       JF_EDGE_URL: "https://${{vars.JF_EDGE_NAME}}.jfrog.io"
-      BUILD_ID: "psj-dkr-${{github.run_number}}"
+      BUILD_ID: "dkr-${{ needs.resolvePackageRun.outputs.package_run_number }}"
     steps:
       - name: "Setup JFrog CLI"
-        uses: jfrog/setup-jfrog-cli@v4
+        uses: jfrog/setup-jfrog-cli@v5
         id: setup-cli
         env:
           JF_URL: ${{env.JF_EDGE_URL}}
           JFROG_CLI_LOG_LEVEL: "ERROR"
         with:
-          version: latest 
-          oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}    
+          version: latest
+          oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
           disable-job-summary: ${{env.JOB_SUMMARY}}
-      
+
       - name: "Edge config show"
         run: |
           jf config show
 
-       # refer: https://docs.jfrog-applications.jfrog.io/jfrog-applications/jfrog-cli/binaries-management-with-jfrog-artifactory/release-lifecycle-management#download-release-bundle-v2-content
+      # RBv1 download uses --bundle=name/version (same version distributed above)
       - name: "Download RBv1 from SaaS Edge"
         run: |
-          jf rt dl --bundle="${{env.RBv1_BUNDLE_NAME}}/${{env.BUILD_ID}}" --detailed-summary=true 
+          jf rt dl --bundle="${{env.RBv1_BUNDLE_NAME}}/${{env.BUILD_ID}}" --detailed-summary=true
 
       - name: "Info list"
         run: |
           pwd
           ls -lR .
 
-      - name: "Optional: Saas ${{vars.JF_EDGE_NAME}} Edge summary"
+      - name: "Optional: SaaS ${{vars.JF_EDGE_NAME}} Edge summary"
         run: |
-          echo "# :frog: Download package from SaaS ${{vars.JF_EDGE_URL}} 📦 " >> $GITHUB_STEP_SUMMARY
-          echo "  - Download RBv2 from Edge [${{vars.JF_EDGE_NAME}}](${{env.JF_EDGE_URL}}) " >> $GITHUB_STEP_SUMMARY
+          echo "# :frog: Download RBv1 from SaaS ${{env.JF_EDGE_URL}}" >> $GITHUB_STEP_SUMMARY
+          echo "  - Bundle: \`${{env.RBv1_BUNDLE_NAME}}/${{env.BUILD_ID}}\` from Edge [${{vars.JF_EDGE_NAME}}](${{env.JF_EDGE_URL}})" >> $GITHUB_STEP_SUMMARY
           echo " " >> $GITHUB_STEP_SUMMARY
 
   mvnRBv1Distribution:
