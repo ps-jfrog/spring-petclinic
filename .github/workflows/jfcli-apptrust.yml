@@ -420,12 +420,14 @@ jobs:
           echo "ARTIFACT_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)" >> $GITHUB_ENV
           echo "SHORT_COMMIT_CODE=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
           echo "TODAYS_DATE=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
-          echo "APPLICATION_VERSION=mvn-${{ github.run_number }}.$(date '+%Y.%m%d+%H%M')" >> $GITHUB_ENV 
-        timeout-minutes: 15    
-        continue-on-error: true  
+          echo "APPLICATION_VERSION=mvn-${{ github.run_number }}.$(date '+%Y.%m%d+%H%M')" >> $GITHUB_ENV
+
+      - name: "Curation-Audit: MVN"
+        timeout-minutes: 15
+        continue-on-error: true
         run: |
           jf ca --format=table --threads=100
-  
+
       - name: "Xray & JAS: Audit" 
         continue-on-error: true  
         timeout-minutes: 15 
