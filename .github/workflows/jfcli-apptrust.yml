@@ -13,7 +13,8 @@ env:
   BUILD_NAME: "spring-petclinic" # spring-petclinic-3.5.0-SNAPSHOT.jar  RBV2_BUNDLE_NAME: "rbv2-spring-petclinic"
   PROJECT_KEY: "ps-apptrust-rlm"
   APPLICATION_KEY: "app-spring-petclinic"
-  APPLICATION_VERSION: "${{ github.run_number }}.$(date +'%Y.%m+%d')"
+  # Shell $(date) is not evaluated in workflow env; each job sets APPLICATION_VERSION via $GITHUB_ENV
+  APPLICATION_VERSION: "${{ github.run_number }}"
   JOB_SUMMARY: false
   CLI_LOG_LEVEL: DEBUG # DEBUG, INFO, WARN, ERROR
   JAVA_DISTRIBUTION: 'temurin'
@@ -29,7 +30,6 @@ jobs:
     name: "Docker Package"
     env:  
       BUILD_ID: "dkr-${{github.run_number}}"
-      # env context is not available in jobs.<id>.env; set date suffix in a step below
       RT_REPO_VIRTUAL: "rbv2-spring-petclinic-docker-virtual"
       RT_REPO_LOCAL_DEFAULT: "rbv2-spring-petclinic-docker-init-local"
       RT_REPO_LOCAL_DEV: "rbv2-spring-petclinic-docker-dev-local"
@@ -97,6 +97,7 @@ jobs:
           echo "ARTIFACT_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)" >> $GITHUB_ENV
           echo "SHORT_COMMIT_CODE=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
           echo "TODAYS_DATE=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
+          echo "APPLICATION_VERSION=${{ github.run_number }}.$(date '+%Y.%m%d+%H%M')" >> $GITHUB_ENV
           echo "RT_REPO_DOCKER_IMG=${{env.RT_REPO_VIRTUAL}}/${{env.BUILD_NAME}}" >> $GITHUB_ENV
           echo "JF_REGISTRY=${{env.JF_RT_URL}}/${{env.RT_REPO_VIRTUAL}}" >> $GITHUB_ENV
           echo "RT_REPO_DOCKER_URL=${{vars.JF_NAME}}.jfrog.io/${{env.RT_REPO_VIRTUAL}}/${{env.BUILD_NAME}}:${{env.BUILD_ID}}" >> $GITHUB_ENV
@@ -416,6 +417,7 @@ jobs:
           echo "ARTIFACT_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)" >> $GITHUB_ENV
           echo "SHORT_COMMIT_CODE=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
           echo "TODAYS_DATE=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
+          echo "APPLICATION_VERSION=${{ github.run_number }}.$(date '+%Y.%m%d+%H%M')" >> $GITHUB_ENV
 
       - name: "Curation: audit" 
         timeout-minutes: 15    
@@ -653,6 +655,7 @@ jobs:
         run: |
           pwd
           tree .
+          echo "APPLICATION_VERSION=${{ github.run_number }}.$(date '+%Y.%m%d+%H%M')" >> $GITHUB_ENV
 
       - name: "Gradle: summary"
         run: |
@@ -789,6 +792,8 @@ jobs:
     steps:
       - name: "Write pipeline metadata info"
         run: |
+          APPLICATION_VERSION="${{ github.run_number }}.$(date +'%Y.%m.%d')"
+          echo "APPLICATION_VERSION=${APPLICATION_VERSION}" >> $GITHUB_ENV
           {
             echo "apptrust_run_number=${{ github.run_number }}"
             echo "workflow_run_id=${{ github.run_id }}"
@@ -797,7 +802,7 @@ jobs:
             echo "project_key=${{ env.PROJECT_KEY }}"
             echo "build_name=${{ env.BUILD_NAME }}"
             echo "application_key=${{ env.APPLICATION_KEY }}"
-            echo "application_version=${{env.APPLICATION_VERSION}}"
+            echo "application_version=${APPLICATION_VERSION}"
             echo "build_time=$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
           } > ${{env.METADATA_FILE}}
 
