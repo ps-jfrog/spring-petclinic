@@ -809,9 +809,9 @@ jobs:
             echo "build_name=${{ env.BUILD_NAME }}"
             echo "application_key=${{ env.APPLICATION_KEY }}"
             echo "application_version=${APPLICATION_VERSION}"
-            echo "docker_application_version=${{ needs.dockerPackage.outputs.application_version }}"
-            echo "mvn_application_version=${{ needs.mvnPackage.outputs.application_version }}"
-            echo "gradle_application_version=${{ needs.gradlePackage.outputs.application_version }}"
+            echo "dkr_application_version=${{ needs.dockerPackage.outputs.dkr_application_version }}"
+            echo "mvn_application_version=${{ needs.mvnPackage.outputs.mvn_application_version }}"
+            echo "gdl_application_version=${{ needs.gradlePackage.outputs.gdl_application_version }}"
             echo "build_time=$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
           } > ${{env.METADATA_FILE}}
 

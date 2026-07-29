@@ -36,7 +36,7 @@ jobs:
     name: "Require AppTrust: Package success"
     runs-on: ubuntu-latest
     outputs:
-      dkr: ${{ steps.resolve_versions.outputs.dkr_application_version }}
+      dkr_application_version: ${{ steps.resolve_versions.outputs.dkr_application_version }}
       mvn_application_version: ${{ steps.resolve_versions.outputs.mvn_application_version }}
       gdl_application_version: ${{ steps.resolve_versions.outputs.gdl_application_version }}
     steps:
@@ -67,19 +67,19 @@ jobs:
           echo "Reading metadata from ${METADATA_FILE}"
           cat "${METADATA_FILE}"
           get_meta() { grep -E "^${1}=" "${METADATA_FILE}" | cut -d= -f2-; }
-          docker_application_version="$(get_meta docker_application_version)"
+          dkr_application_version="$(get_meta dkr_application_version)"
           mvn_application_version="$(get_meta mvn_application_version)"
-          gradle_application_version="$(get_meta gradle_application_version)"
-          [[ -n "${docker_application_version}" ]] || { echo "::error::Missing docker_application_version in Package metadata"; exit 1; }
+          gdl_application_version="$(get_meta gdl_application_version)"
+          [[ -n "${dkr_application_version}" ]] || { echo "::error::Missing dkr_application_version in Package metadata"; exit 1; }
           [[ -n "${mvn_application_version}" ]] || { echo "::error::Missing mvn_application_version in Package metadata"; exit 1; }
-          [[ -n "${gradle_application_version}" ]] || { echo "::error::Missing gradle_application_version in Package metadata"; exit 1; }
-          echo "docker_application_version=${docker_application_version}" >> "$GITHUB_OUTPUT"
+          [[ -n "${gdl_application_version}" ]] || { echo "::error::Missing gdl_application_version in Package metadata"; exit 1; }
+          echo "dkr_application_version=${dkr_application_version}" >> "$GITHUB_OUTPUT"
           echo "mvn_application_version=${mvn_application_version}" >> "$GITHUB_OUTPUT"
-          echo "gradle_application_version=${gradle_application_version}" >> "$GITHUB_OUTPUT"
+          echo "gdl_application_version=${gdl_application_version}" >> "$GITHUB_OUTPUT"
           echo "Resolved APPLICATION_VERSION:"
-          echo "  docker=${docker_application_version}"
+          echo "  docker=${dkr_application_version}"
           echo "  mvn=${mvn_application_version}"
-          echo "  gradle=${gradle_application_version}"
+          echo "  gradle=${gdl_application_version}"
 
   dockerAppPromote2Dev:
     name: "Docker: Promote to DEV"
@@ -106,11 +106,11 @@ jobs:
 
       - name: "Build promote ${{env.ENV_VAL}}"
         run: |
-          jf apptrust version-promote ${{ env.APPLICATION_KEY}} ${{env.APPLICATION_VERSION}}} ${{env.ENV_VAL}}
+          jf apptrust version-promote ${{ env.APPLICATION_KEY}} ${{env.APPLICATION_VERSION}} ${{env.ENV_VAL}}
 
   dockerAppPromote2QA:
     name: "Docker: Promote to QA"
-    needs: dockerAppPromote2Dev
+    needs: [requirePackageSuccess, dockerAppPromote2Dev]
     runs-on: ubuntu-latest
     env:
       ENV_VAL: "QA"
@@ -133,11 +133,11 @@ jobs:
 
       - name: "Build promote ${{env.ENV_VAL}}"
         run: |
-          jf apptrust version-promote ${{ env.APPLICATION_KEY}} ${{env.APPLICATION_VERSION}}} ${{env.ENV_VAL}}
+          jf apptrust version-promote ${{ env.APPLICATION_KEY}} ${{env.APPLICATION_VERSION}} ${{env.ENV_VAL}}
 
   dockerAppPromote2Prod:
     name: "Docker: Promote to PROD"
-    needs: dockerAppPromote2QA
+    needs: [requirePackageSuccess, dockerAppPromote2QA]
     runs-on: ubuntu-latest
     env:
       ENV_VAL: "PROD"
@@ -160,7 +160,7 @@ jobs:
 
       - name: "Build promote ${{env.ENV_VAL}}"
         run: |
-          jf apptrust version-release ${{ env.APPLICATION_KEY}} ${{env.APPLICATION_VERSION}}}
+          jf apptrust version-release ${{ env.APPLICATION_KEY}} ${{env.APPLICATION_VERSION}}
 
   
   mvnAppPromote2Dev:
@@ -188,11 +188,11 @@ jobs:
 
       - name: "Build promote ${{env.ENV_VAL}}"
         run: |
-          jf apptrust version-promote ${{ env.APPLICATION_KEY}} ${{env.APPLICATION_VERSION}}} ${{env.ENV_VAL}}
+          jf apptrust version-promote ${{ env.APPLICATION_KEY}} ${{env.APPLICATION_VERSION}} ${{env.ENV_VAL}}
 
   mvnAppPromote2QA:
     name: "Maven: Promote to QA"
-    needs: mvnAppPromote2Dev
+    needs: [requirePackageSuccess, mvnAppPromote2Dev]
     runs-on: ubuntu-latest
     env:
       ENV_VAL: "QA"
@@ -215,11 +215,11 @@ jobs:
 
       - name: "Build promote ${{env.ENV_VAL}}"
         run: |
-          jf apptrust version-promote ${{ env.APPLICATION_KEY}} ${{env.APPLICATION_VERSION}}} ${{env.ENV_VAL}}
+          jf apptrust version-promote ${{ env.APPLICATION_KEY}} ${{env.APPLICATION_VERSION}} ${{env.ENV_VAL}}
 
   mvnAppPromote2Prod:
     name: "Maven: Promote to PROD"
-    needs: mvnAppPromote2QA
+    needs: [requirePackageSuccess, mvnAppPromote2QA]
     runs-on: ubuntu-latest
     env:
       ENV_VAL: "PROD"
@@ -242,7 +242,7 @@ jobs:
 
       - name: "Build promote ${{env.ENV_VAL}}"
         run: |
-          jf apptrust version-release ${{ env.APPLICATION_KEY}} ${{env.APPLICATION_VERSION}}}
+          jf apptrust version-release ${{ env.APPLICATION_KEY}} ${{env.APPLICATION_VERSION}}
 
   
   gradleAppPromote2Dev:
@@ -270,11 +270,11 @@ jobs:
 
       - name: "Build promote ${{env.ENV_VAL}}"
         run: |
-          jf apptrust version-promote ${{ env.APPLICATION_KEY}} ${{env.APPLICATION_VERSION}}} ${{env.ENV_VAL}}
+          jf apptrust version-promote ${{ env.APPLICATION_KEY}} ${{env.APPLICATION_VERSION}} ${{env.ENV_VAL}}
 
   gradleAppPromote2QA:
     name: "Gradle: Promote to QA"
-    needs: gradleAppPromote2Dev
+    needs: [requirePackageSuccess, gradleAppPromote2Dev]
     runs-on: ubuntu-latest
     env:
       ENV_VAL: "QA"
@@ -297,11 +297,11 @@ jobs:
 
       - name: "Build promote ${{env.ENV_VAL}}"
         run: |
-          jf apptrust version-promote ${{ env.APPLICATION_KEY}} ${{env.APPLICATION_VERSION}}} ${{env.ENV_VAL}}
+          jf apptrust version-promote ${{ env.APPLICATION_KEY}} ${{env.APPLICATION_VERSION}} ${{env.ENV_VAL}}
 
   gradleAppPromote2Prod:
     name: "Gradle: Promote to PROD"
-    needs: gradleAppPromote2QA
+    needs: [requirePackageSuccess, gradleAppPromote2QA]
     runs-on: ubuntu-latest
     env:
       ENV_VAL: "PROD"
@@ -324,12 +324,13 @@ jobs:
 
       - name: "Build promote ${{env.ENV_VAL}}"
         run: |
-          jf apptrust version-release ${{ env.APPLICATION_KEY}} ${{env.APPLICATION_VERSION}}}
+          jf apptrust version-release ${{ env.APPLICATION_KEY}} ${{env.APPLICATION_VERSION}}
 
 
   summaryAppPromote:
     name: "Summary AppPromote"
     needs: 
+      - requirePackageSuccess
       - dockerAppPromote2Prod
       - mvnAppPromote2Prod
       - gradleAppPromote2Prod
@@ -352,7 +353,13 @@ jobs:
           oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
           disable-job-summary: ${{env.JOB_SUMMARY}}
 
-      - name: "Cleanup on stages: DEV & QA"
+      - name: "Promotion Summary"
         run: |
-          jf apptrust version-discard ${{ env.APPLICATION_KEY}} ${{env.APPLICATION_VERSION}}} ${{env.ENV_VAL}}
+          echo "# :frog: :ship: AppTrust: Promote - Summary :pushpin:" >> $GITHUB_STEP_SUMMARY
+          echo " " >> $GITHUB_STEP_SUMMARY
+          echo " - Application: [${{env.APPLICATION_KEY}}](https://${{vars.JF_NAME}}.jfrog.io/ui/apptrust/applications/${{env.APPLICATION_KEY}}?projectKey=${{env.PROJECT_KEY}}) " >> $GITHUB_STEP_SUMMARY
+          echo " - Released versions (DEV :arrow_right: QA :arrow_right: PROD) " >> $GITHUB_STEP_SUMMARY
+          echo "    - Docker: ${{ needs.requirePackageSuccess.outputs.dkr_application_version }} " >> $GITHUB_STEP_SUMMARY
+          echo "    - Maven: ${{ needs.requirePackageSuccess.outputs.mvn_application_version }} " >> $GITHUB_STEP_SUMMARY
+          echo "    - Gradle: ${{ needs.requirePackageSuccess.outputs.gdl_application_version }} " >> $GITHUB_STEP_SUMMARY
 
