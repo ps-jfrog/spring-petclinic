@@ -1,12 +1,12 @@
 
 clear
 
-export JF_NAME="psazuse" JFROG_CLI_LOG_LEVEL="DEBUG" 
+export JF_NAME="psazuse" JF_EDGE_NAME="psazeuwedge" JFROG_CLI_LOG_LEVEL="DEBUG" 
 export JF_RT_URL="https://${JF_NAME}.jfrog.io" PROJECT_KEY="ps-apptrust-rlm" APPLICATION_KEY="app-spring-petclinic"
-export RT_REPO_VIRTUAL= "rbv2-spring-petclinic-mvn-virtual" # RT_REPO_LOCAL_DEFAULT="rbv2-spring-petclinic-mvn-init-local"
+export RT_REPO_VIRTUAL="rbv2-spring-petclinic-mvn-virtual" # RT_REPO_LOCAL_DEFAULT="rbv2-spring-petclinic-mvn-init-local"
 # RT_REPO_LOCAL_DEV="rbv2-spring-petclinic-mvn-dev-local" RT_REPO_LOCAL_QA="rbv2-spring-petclinic-mvn-qa-local"   RT_REPO_LOCAL_PROD="rbv2-spring-petclinic-mvn-prod-local"
 
-export TIMESTAMP="$(date '+%Y.%m.%d-%H%M')"
+export TIMESTAMP="$(date '+%Y.%m.%d+%H%M')"
 export BUILD_NAME="spring-petclinic" BUILD_ID="cmd-at.${TIMESTAMP}" APPLICATION_VERSION="${TIMESTAMP}"
 export EVD_KEY_PRIVATE="$(cat ~/.ssh/jfrog_evd_private.pem)" EVD_KEY_PUBLIC="$(cat ~/.ssh/jfrog_evd_public.pem)" EVD_KEY_ALIAS="KRISHNAM_JFROG_EVD_PUBLICKEY"
 
@@ -99,9 +99,42 @@ echo "\n*** AppTrust: App Version promote to QA **\n"
 jf apptrust version-promote ${APPLICATION_KEY} ${APPLICATION_VERSION} QA
 sleep 2
 
+set -o xtrace # DEBUG ON
 # ref: https://docs.jfrog.com/governance/docs/release-application-version-cli
 echo "\n*** AppTrust: App Version promote to PROD **\n"
+# DEBUG: jf apptrust version-release app-spring-petclinic 2026.07.29-0812
 jf apptrust version-release ${APPLICATION_KEY} ${APPLICATION_VERSION}  
+
+# ref: https://docs.jfrog.com/governance/docs/distribute-application-version
+# Distributing Application Versions is a per-instance AppTrust toggle. On psazuse it is currently
+# off, so the API answers 400 "Distributing Application Versions is disabled on this instance."
+# Treat that as a skip rather than a failure: the version is already RELEASED at PROD, and the
+# rest of the flow (promote/release/evidence) is unaffected. Set AT_DISTRIBUTE=false to opt out.
+# DEBUG: jf apptrust version-distribute app-spring-petclinic 2026.07.29-0812 --site="psazeuwedge" --create-repo=true
+jf apptrust version-distribute ${APPLICATION_KEY} ${APPLICATION_VERSION} --site="${JF_EDGE_NAME}" --create-repo=true
+
+set +o xtrace # DEBUG OFF
+
+# export AT_DISTRIBUTE="${AT_DISTRIBUTE:-true}"
+# if [ "${AT_DISTRIBUTE}" = "true" ]; then
+#   echo "\n*** AppTrust: App Version distribute to Edge: ${JF_EDGE_NAME} **\n"
+#   # jf apptrust version-distribute app-spring-petclinic 2026.07.29-0812 --site="psazeuwedge" --create-repo=true
+#   AT_DIST_LOG="$(mktemp -t at-distribute)"
+#   if jf apptrust version-distribute ${APPLICATION_KEY} ${APPLICATION_VERSION} --site="${JF_EDGE_NAME}" --create-repo=true > "${AT_DIST_LOG}" 2>&1; then
+#     cat "${AT_DIST_LOG}"
+#     echo "Distribution triggered asynchronously - confirm the artifacts landed on ${JF_EDGE_NAME}"
+#   elif grep -q "disabled on this instance" "${AT_DIST_LOG}"; then
+#     cat "${AT_DIST_LOG}"
+#     echo "SKIP: AppTrust distribution is disabled on ${JF_NAME}. Ask JFrog support to enable it,"
+#     echo "      or use the RBv1 path in jfrog/jfcli-bpr-rbv1.sh (jf ds rbd) to reach ${JF_EDGE_NAME}."
+#   else
+#     cat "${AT_DIST_LOG}"
+#     echo "ERROR: distribute of ${APPLICATION_KEY} ${APPLICATION_VERSION} to ${JF_EDGE_NAME} failed"
+#   fi
+#   rm -f "${AT_DIST_LOG}"
+# else
+#   echo "\n*** AppTrust: App Version distribute SKIPPED (AT_DISTRIBUTE=${AT_DISTRIBUTE}) **\n"
+# fi
 
 
 sleep 2

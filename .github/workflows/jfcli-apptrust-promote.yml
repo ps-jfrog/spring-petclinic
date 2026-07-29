@@ -1,0 +1,358 @@
+name: "AppTrust: Promote"
+on: 
+  workflow_run:
+    workflows: 
+      - "AppTrust: Package"
+    types: [completed]
+permissions:
+  pull-requests: write
+  contents: write
+  actions: read # for detecting the Github Actions environment.
+  id-token: write # for creating OIDC tokens for signing.
+  packages: write # for uploading attestations.
+  security-events: write # Required for uploading code scanning.
+  attestations: write
+  artifact-metadata: write
+env:
+  JF_RT_URL: "https://${{vars.JF_NAME}}.jfrog.io"
+  BUILD_NAME: "spring-petclinic" # spring-petclinic-3.5.0-SNAPSHOT.jar  RBV2_BUNDLE_NAME: "rbv2-spring-petclinic"
+  PROJECT_KEY: "ps-apptrust-rlm"
+  APPLICATION_KEY: "app-spring-petclinic"
+  # Per-package APPLICATION_VERSION is resolved in requirePackageSuccess from Package metadata
+  # (dockerPackage / mvnPackage / gradlePackage) and passed via job outputs.
+  JOB_SUMMARY: false
+  CLI_LOG_LEVEL: DEBUG # DEBUG, INFO, WARN, ERROR
+  JAVA_DISTRIBUTION: 'temurin'
+  JAVA_VERSION: '25'
+  #RBV2_SIGNING_KEY: "${{secrets.RBV2_SIGNING_KEY}}" # ref https://jfrog.com/help/r/jfrog-artifactory-documentation/create-signing-keys-for-release-bundles-v2
+  DEFAULT_WORKSPACE: "${{github.workspace}}"  # /home/runner/work/spring-petclinic/spring-petclinic
+
+jobs:
+  # Fail (do not skip) when Package did not succeed so this workflow's conclusion
+  # is failure/cancelled-aware and AppTrust: Package Distribution will not start jobs.
+  # Also resolve per-package APPLICATION_VERSION values created in AppTrust: Package
+  # (dockerPackage / mvnPackage / gradlePackage) and expose them as job outputs.
+  requirePackageSuccess:
+    name: "Require AppTrust: Package success"
+    runs-on: ubuntu-latest
+    outputs:
+      dkr: ${{ steps.resolve_versions.outputs.dkr_application_version }}
+      mvn_application_version: ${{ steps.resolve_versions.outputs.mvn_application_version }}
+      gdl_application_version: ${{ steps.resolve_versions.outputs.gdl_application_version }}
+    steps:
+      - name: "Check AppTrust: Package conclusion"
+        env:
+          UPSTREAM_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          UPSTREAM_NAME: ${{ github.event.workflow_run.name }}
+          UPSTREAM_RUN: ${{ github.event.workflow_run.run_number }}
+        run: |
+          echo "${UPSTREAM_NAME} run #${UPSTREAM_RUN} conclusion=${UPSTREAM_CONCLUSION}"
+          if [[ "${UPSTREAM_CONCLUSION}" != "success" ]]; then
+            echo "::error::AppTrust: Package did not succeed (conclusion=${UPSTREAM_CONCLUSION}); promote chain will not run"
+            exit 1
+          fi
+
+      - name: "Download AppTrust: Package metadata artifact"
+        uses: actions/download-artifact@v7
+        with:
+          name: apptrust-metadata-${{ github.event.workflow_run.run_number }}
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ./package-metadata
+
+      - name: "Resolve APPLICATION_VERSION from Package jobs"
+        id: resolve_versions
+        run: |
+          METADATA_FILE="./package-metadata/apptrust-${{ github.event.workflow_run.run_number }}.txt"
+          echo "Reading metadata from ${METADATA_FILE}"
+          cat "${METADATA_FILE}"
+          get_meta() { grep -E "^${1}=" "${METADATA_FILE}" | cut -d= -f2-; }
+          docker_application_version="$(get_meta docker_application_version)"
+          mvn_application_version="$(get_meta mvn_application_version)"
+          gradle_application_version="$(get_meta gradle_application_version)"
+          [[ -n "${docker_application_version}" ]] || { echo "::error::Missing docker_application_version in Package metadata"; exit 1; }
+          [[ -n "${mvn_application_version}" ]] || { echo "::error::Missing mvn_application_version in Package metadata"; exit 1; }
+          [[ -n "${gradle_application_version}" ]] || { echo "::error::Missing gradle_application_version in Package metadata"; exit 1; }
+          echo "docker_application_version=${docker_application_version}" >> "$GITHUB_OUTPUT"
+          echo "mvn_application_version=${mvn_application_version}" >> "$GITHUB_OUTPUT"
+          echo "gradle_application_version=${gradle_application_version}" >> "$GITHUB_OUTPUT"
+          echo "Resolved APPLICATION_VERSION:"
+          echo "  docker=${docker_application_version}"
+          echo "  mvn=${mvn_application_version}"
+          echo "  gradle=${gradle_application_version}"
+
+  dockerAppPromote2Dev:
+    name: "Docker: Promote to DEV"
+    needs: requirePackageSuccess
+    runs-on: ubuntu-latest
+    env:
+      ENV_VAL: "DEV"
+      APPLICATION_VERSION: "${{ needs.requirePackageSuccess.outputs.dkr_application_version }}"
+    defaults:
+       run:
+         working-directory: "${{env.DEFAULT_WORKSPACE}}"
+    steps:
+      - name: "Setup JFrog CLI"
+        uses: jfrog/setup-jfrog-cli@v5
+        id: setup-cli
+        env:
+          JF_URL: ${{env.JF_RT_URL}}
+          JF_PROJECT: "${{env.PROJECT_KEY}}"
+          JFROG_CLI_LOG_LEVEL: "${{env.CLI_LOG_LEVEL}}"
+        with:
+          version: latest  #2.71.0
+          oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
+          disable-job-summary: ${{env.JOB_SUMMARY}}
+
+      - name: "Build promote ${{env.ENV_VAL}}"
+        run: |
+          jf apptrust version-promote ${{ env.APPLICATION_KEY}} ${{env.APPLICATION_VERSION}}} ${{env.ENV_VAL}}
+
+  dockerAppPromote2QA:
+    name: "Docker: Promote to QA"
+    needs: dockerAppPromote2Dev
+    runs-on: ubuntu-latest
+    env:
+      ENV_VAL: "QA"
+      APPLICATION_VERSION: "${{ needs.requirePackageSuccess.outputs.dkr_application_version }}"
+    defaults:
+       run:
+         working-directory: "${{env.DEFAULT_WORKSPACE}}"
+    steps:
+      - name: "Setup JFrog CLI"
+        uses: jfrog/setup-jfrog-cli@v5
+        id: setup-cli
+        env:
+          JF_URL: ${{env.JF_RT_URL}}
+          JF_PROJECT: "${{env.PROJECT_KEY}}"
+          JFROG_CLI_LOG_LEVEL: "${{env.CLI_LOG_LEVEL}}"
+        with:
+          version: latest  #2.71.0
+          oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
+          disable-job-summary: ${{env.JOB_SUMMARY}}
+
+      - name: "Build promote ${{env.ENV_VAL}}"
+        run: |
+          jf apptrust version-promote ${{ env.APPLICATION_KEY}} ${{env.APPLICATION_VERSION}}} ${{env.ENV_VAL}}
+
+  dockerAppPromote2Prod:
+    name: "Docker: Promote to PROD"
+    needs: dockerAppPromote2QA
+    runs-on: ubuntu-latest
+    env:
+      ENV_VAL: "PROD"
+      APPLICATION_VERSION: "${{ needs.requirePackageSuccess.outputs.dkr_application_version }}"
+    defaults:
+       run:
+         working-directory: "${{env.DEFAULT_WORKSPACE}}"
+    steps:
+      - name: "Setup JFrog CLI"
+        uses: jfrog/setup-jfrog-cli@v5
+        id: setup-cli
+        env:
+          JF_URL: ${{env.JF_RT_URL}}
+          JF_PROJECT: "${{env.PROJECT_KEY}}"
+          JFROG_CLI_LOG_LEVEL: "${{env.CLI_LOG_LEVEL}}"
+        with:
+          version: latest  #2.71.0
+          oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
+          disable-job-summary: ${{env.JOB_SUMMARY}}
+
+      - name: "Build promote ${{env.ENV_VAL}}"
+        run: |
+          jf apptrust version-release ${{ env.APPLICATION_KEY}} ${{env.APPLICATION_VERSION}}}
+
+  
+  mvnAppPromote2Dev:
+    name: "Maven: Promote to DEV"
+    needs: requirePackageSuccess
+    runs-on: ubuntu-latest
+    env:
+      ENV_VAL: "DEV"
+      APPLICATION_VERSION: "${{ needs.requirePackageSuccess.outputs.mvn_application_version }}"
+    defaults:
+       run:
+         working-directory: "${{env.DEFAULT_WORKSPACE}}"
+    steps:
+      - name: "Setup JFrog CLI"
+        uses: jfrog/setup-jfrog-cli@v5
+        id: setup-cli
+        env:
+          JF_URL: ${{env.JF_RT_URL}}
+          JF_PROJECT: "${{env.PROJECT_KEY}}"
+          JFROG_CLI_LOG_LEVEL: "${{env.CLI_LOG_LEVEL}}"
+        with:
+          version: latest  #2.71.0
+          oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
+          disable-job-summary: ${{env.JOB_SUMMARY}}
+
+      - name: "Build promote ${{env.ENV_VAL}}"
+        run: |
+          jf apptrust version-promote ${{ env.APPLICATION_KEY}} ${{env.APPLICATION_VERSION}}} ${{env.ENV_VAL}}
+
+  mvnAppPromote2QA:
+    name: "Maven: Promote to QA"
+    needs: mvnAppPromote2Dev
+    runs-on: ubuntu-latest
+    env:
+      ENV_VAL: "QA"
+      APPLICATION_VERSION: "${{ needs.requirePackageSuccess.outputs.mvn_application_version }}"
+    defaults:
+       run:
+         working-directory: "${{env.DEFAULT_WORKSPACE}}"
+    steps:
+      - name: "Setup JFrog CLI"
+        uses: jfrog/setup-jfrog-cli@v5
+        id: setup-cli
+        env:
+          JF_URL: ${{env.JF_RT_URL}}
+          JF_PROJECT: "${{env.PROJECT_KEY}}"
+          JFROG_CLI_LOG_LEVEL: "${{env.CLI_LOG_LEVEL}}"
+        with:
+          version: latest  #2.71.0
+          oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
+          disable-job-summary: ${{env.JOB_SUMMARY}}
+
+      - name: "Build promote ${{env.ENV_VAL}}"
+        run: |
+          jf apptrust version-promote ${{ env.APPLICATION_KEY}} ${{env.APPLICATION_VERSION}}} ${{env.ENV_VAL}}
+
+  mvnAppPromote2Prod:
+    name: "Maven: Promote to PROD"
+    needs: mvnAppPromote2QA
+    runs-on: ubuntu-latest
+    env:
+      ENV_VAL: "PROD"
+      APPLICATION_VERSION: "${{ needs.requirePackageSuccess.outputs.mvn_application_version }}"
+    defaults:
+       run:
+         working-directory: "${{env.DEFAULT_WORKSPACE}}"
+    steps:
+      - name: "Setup JFrog CLI"
+        uses: jfrog/setup-jfrog-cli@v5
+        id: setup-cli
+        env:
+          JF_URL: ${{env.JF_RT_URL}}
+          JF_PROJECT: "${{env.PROJECT_KEY}}"
+          JFROG_CLI_LOG_LEVEL: "${{env.CLI_LOG_LEVEL}}"
+        with:
+          version: latest  #2.71.0
+          oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
+          disable-job-summary: ${{env.JOB_SUMMARY}}
+
+      - name: "Build promote ${{env.ENV_VAL}}"
+        run: |
+          jf apptrust version-release ${{ env.APPLICATION_KEY}} ${{env.APPLICATION_VERSION}}}
+
+  
+  gradleAppPromote2Dev:
+    name: "Gradle: Promote to DEV"
+    needs: requirePackageSuccess
+    runs-on: ubuntu-latest
+    env:
+      ENV_VAL: "DEV"
+      APPLICATION_VERSION: "${{ needs.requirePackageSuccess.outputs.gdl_application_version }}"
+    defaults:
+       run:
+         working-directory: "${{env.DEFAULT_WORKSPACE}}"
+    steps:
+      - name: "Setup JFrog CLI"
+        uses: jfrog/setup-jfrog-cli@v5
+        id: setup-cli
+        env:
+          JF_URL: ${{env.JF_RT_URL}}
+          JF_PROJECT: "${{env.PROJECT_KEY}}"
+          JFROG_CLI_LOG_LEVEL: "${{env.CLI_LOG_LEVEL}}"
+        with:
+          version: latest  #2.71.0
+          oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
+          disable-job-summary: ${{env.JOB_SUMMARY}}
+
+      - name: "Build promote ${{env.ENV_VAL}}"
+        run: |
+          jf apptrust version-promote ${{ env.APPLICATION_KEY}} ${{env.APPLICATION_VERSION}}} ${{env.ENV_VAL}}
+
+  gradleAppPromote2QA:
+    name: "Gradle: Promote to QA"
+    needs: gradleAppPromote2Dev
+    runs-on: ubuntu-latest
+    env:
+      ENV_VAL: "QA"
+      APPLICATION_VERSION: "${{ needs.requirePackageSuccess.outputs.gdl_application_version }}"
+    defaults:
+       run:
+         working-directory: "${{env.DEFAULT_WORKSPACE}}"
+    steps:
+      - name: "Setup JFrog CLI"
+        uses: jfrog/setup-jfrog-cli@v5
+        id: setup-cli
+        env:
+          JF_URL: ${{env.JF_RT_URL}}
+          JF_PROJECT: "${{env.PROJECT_KEY}}"
+          JFROG_CLI_LOG_LEVEL: "${{env.CLI_LOG_LEVEL}}"
+        with:
+          version: latest  #2.71.0
+          oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
+          disable-job-summary: ${{env.JOB_SUMMARY}}
+
+      - name: "Build promote ${{env.ENV_VAL}}"
+        run: |
+          jf apptrust version-promote ${{ env.APPLICATION_KEY}} ${{env.APPLICATION_VERSION}}} ${{env.ENV_VAL}}
+
+  gradleAppPromote2Prod:
+    name: "Gradle: Promote to PROD"
+    needs: gradleAppPromote2QA
+    runs-on: ubuntu-latest
+    env:
+      ENV_VAL: "PROD"
+      APPLICATION_VERSION: "${{ needs.requirePackageSuccess.outputs.gdl_application_version }}"
+    defaults:
+       run:
+         working-directory: "${{env.DEFAULT_WORKSPACE}}"
+    steps:
+      - name: "Setup JFrog CLI"
+        uses: jfrog/setup-jfrog-cli@v5
+        id: setup-cli
+        env:
+          JF_URL: ${{env.JF_RT_URL}}
+          JF_PROJECT: "${{env.PROJECT_KEY}}"
+          JFROG_CLI_LOG_LEVEL: "${{env.CLI_LOG_LEVEL}}"
+        with:
+          version: latest  #2.71.0
+          oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
+          disable-job-summary: ${{env.JOB_SUMMARY}}
+
+      - name: "Build promote ${{env.ENV_VAL}}"
+        run: |
+          jf apptrust version-release ${{ env.APPLICATION_KEY}} ${{env.APPLICATION_VERSION}}}
+
+
+  summaryAppPromote:
+    name: "Summary AppPromote"
+    needs: 
+      - dockerAppPromote2Prod
+      - mvnAppPromote2Prod
+      - gradleAppPromote2Prod
+    runs-on: ubuntu-latest
+    env:
+      MAX_BUILDS: 25 # The maximum number of builds to store in Artifactory
+    defaults:
+       run:
+         working-directory: "${{env.DEFAULT_WORKSPACE}}"
+    steps:
+      - name: "Setup JFrog CLI"
+        uses: jfrog/setup-jfrog-cli@v5
+        id: setup-cli
+        env:
+          JF_URL: ${{env.JF_RT_URL}}
+          JF_PROJECT: "${{env.PROJECT_KEY}}"
+          JFROG_CLI_LOG_LEVEL: "${{env.CLI_LOG_LEVEL}}"
+        with:
+          version: latest  #2.71.0
+          oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
+          disable-job-summary: ${{env.JOB_SUMMARY}}
+
+      - name: "Cleanup on stages: DEV & QA"
+        run: |
+          jf apptrust version-discard ${{ env.APPLICATION_KEY}} ${{env.APPLICATION_VERSION}}} ${{env.ENV_VAL}}
+
