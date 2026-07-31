@@ -99,6 +99,9 @@ class OwnerController {
 		if (lastName == null) {
 			lastName = ""; // empty string signifies broadest possible search
 		}
+		else {
+			lastName = lastName.strip();
+		}
 
 		// find owners by last name
 		Page<Owner> ownersResults = findPaginatedForOwnersLastName(page, lastName);
