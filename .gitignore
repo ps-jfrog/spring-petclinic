@@ -48,4 +48,7 @@ _site/
 .jfrog/*
 .cursor/*
 .vscode/*
+# Keep Maven Wrapper properties tracked — jf ca / audit invoke ./mvnw
 .mvn/*
+!.mvn/wrapper/
+!.mvn/wrapper/maven-wrapper.properties
