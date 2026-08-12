@@ -39,6 +39,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30   # ref  https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#jobsjob_idtimeout-minutes
     steps:
+      - uses: muldos/ci-traffic-monitor@v1
+        with:
+          detailed: 'true'
       # Use the specific setup-cli branch. Ref https://github.com/marketplace/actions/setup-jfrog-cli
       - name: "Setup JFrog CLI"
         uses: jfrog/setup-jfrog-cli@v5
@@ -299,6 +302,10 @@ jobs:
          working-directory: "${{env.DEFAULT_WORKSPACE}}"
     runs-on: ubuntu-latest
     steps:
+      - uses: muldos/ci-traffic-monitor@v1
+        with:
+          detailed: 'true' # optional: 'true' to get detailed output
+
       - name: "Setup JFrog CLI"
         uses: jfrog/setup-jfrog-cli@v5
         id: setup-cli
@@ -503,6 +510,9 @@ jobs:
          working-directory: "${{env.DEFAULT_WORKSPACE}}"
     runs-on: ubuntu-latest
     steps:
+      - uses: muldos/ci-traffic-monitor@v1
+        with:
+          detailed: 'true'
       - name: "Setup JFrog CLI"
         uses: jfrog/setup-jfrog-cli@v5
         id: setup-cli
