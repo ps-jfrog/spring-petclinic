@@ -644,7 +644,7 @@ jobs:
       - gradlePackage
     # Job-level permissions replace workflow defaults. id-token is required for JFrog OIDC.
     # Repo Issues are disabled on ps-jfrog/spring-petclinic, so this job must not call gh issue create.
-    # Org Projects v2 writes need secrets.GH_PROJECT_TOKEN (GITHUB_TOKEN cannot add items).
+    # Projects v2 writes need secrets.GH_PROJECT_TOKEN (GITHUB_TOKEN cannot add items).
     permissions:
       actions: read
       id-token: write
@@ -739,11 +739,12 @@ jobs:
           echo " " >> $GITHUB_STEP_SUMMARY
 
       # Creates a Projects v2 *draft item* (not a repo Issue). GITHUB_TOKEN cannot write
-      # org projects; store a PAT (scope: project) or GitHub App token as GH_PROJECT_TOKEN.
+      # projects; store a PAT (scope: project) or GitHub App token as GH_PROJECT_TOKEN.
+      # GH_OWNER is the project owner (user frogkris), not the repo owner (org ps-jfrog).
       - name: "Create task in the GitHub Projects"
         env:
           GH_TOKEN: ${{ secrets.GH_PROJECT_TOKEN }}
-          GH_OWNER: ${{ github.repository_owner }}
+          GH_OWNER: "frogkris"
           GH_PROJECT_NAME: "PS Team pipeline"
           GH_PROJECT_ID: "1"
           BUILD_ID: "${{ github.run_number }}"
@@ -753,7 +754,7 @@ jobs:
           set -euo pipefail
 
           if [[ -z "${GH_TOKEN}" ]]; then
-            echo "::warning::secrets.GH_PROJECT_TOKEN is empty; skipping GitHub Projects task creation. GITHUB_TOKEN cannot write org Projects v2, and ${{ github.repository }} has Issues disabled so there is no gh issue create fallback."
+            echo "::warning::secrets.GH_PROJECT_TOKEN is empty; skipping GitHub Projects task creation. GITHUB_TOKEN cannot write Projects v2, and ${{ github.repository }} has Issues disabled so there is no gh issue create fallback."
             echo "- :warning: GitHub Projects task **skipped** (\`GH_PROJECT_TOKEN\` not configured)" >> "${GITHUB_STEP_SUMMARY}"
             exit 0
           fi
@@ -780,10 +781,15 @@ jobs:
           )
 
           PROJECT_NUMBER="${GH_PROJECT_ID}"
-          RESOLVED_NUMBER="$(gh project list --owner "${GH_OWNER}" --limit 100 --format json \
-            --jq ".projects[] | select(.title == \"${GH_PROJECT_NAME}\") | .number" | head -n1 || true)"
+          PROJECT_LIST="$(gh project list --owner "${GH_OWNER}" --limit 100 --format json || echo '{}')"
+          RESOLVED_NUMBER="$(echo "${PROJECT_LIST}" \
+            | jq -r --arg t "${GH_PROJECT_NAME}" '.projects[]? | select(.title == $t) | .number' | head -n1)"
           if [[ -n "${RESOLVED_NUMBER}" ]]; then
             PROJECT_NUMBER="${RESOLVED_NUMBER}"
+          else
+            echo "::warning::No project titled '${GH_PROJECT_NAME}' visible to GH_PROJECT_TOKEN under owner '${GH_OWNER}'; falling back to number ${PROJECT_NUMBER}."
+            echo "Projects visible to this token under ${GH_OWNER}:"
+            echo "${PROJECT_LIST}" | jq -r '.projects[]? | "  #\(.number) \(.title)"'
           fi
           echo "Using GitHub Project '${GH_PROJECT_NAME}' number=${PROJECT_NUMBER} owner=${GH_OWNER}"
 
