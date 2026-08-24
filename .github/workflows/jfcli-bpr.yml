@@ -95,7 +95,8 @@ jobs:
           echo "SHORT_COMMIT_CODE=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
           echo "TODAYS_DATE=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
           echo "RT_REPO_DOCKER_IMG=${{env.RT_REPO_VIRTUAL}}/${{env.BUILD_NAME}}" >> $GITHUB_ENV
-          echo "JF_REGISTRY=${{env.JF_RT_URL}}/${{env.RT_REPO_VIRTUAL}}" >> $GITHUB_ENV
+          # docker/login-action expects a registry host, not https:// or a repo path
+          echo "JF_REGISTRY=${{vars.JF_NAME}}.jfrog.io" >> $GITHUB_ENV
           echo "RT_REPO_DOCKER_URL=${{vars.JF_NAME}}.jfrog.io/${{env.RT_REPO_VIRTUAL}}/${{env.BUILD_NAME}}:${{env.BUILD_ID}}" >> $GITHUB_ENV
 
       - name: "Docker authentication"  # ref https://github.com/marketplace/actions/docker-login
@@ -124,7 +125,7 @@ jobs:
         continue-on-error: true    # ref: https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#jobsjob_idstepscontinue-on-error
         run: |
           rm -rf build.gradle 
-          jf ca --format=table --threads=100 --image=psazuse.jfrog.io/springpetclinic-docker-virtual/amazoncorretto:25-alpine-jdk
+          jf ca --format=table --threads=100 --image=${{vars.JF_NAME}}.jfrog.io/springpetclinic-docker-virtual/amazoncorretto:25-alpine-jdk
 
       - name: "Curation-Audit: MVN" 
         timeout-minutes: 15   
@@ -153,7 +154,7 @@ jobs:
 
       - name: "Package: Docker build and push"
         env:
-          DOCKER_FILE: "./jfrog/Dockerfile"
+          DOCKER_FILE: "./jfrog/BPRDockerfile"
           JAR_FILE: "./target/${{env.ARTIFACT_NAME}}-${{env.ARTIFACT_VERSION}}.jar"
           TAG10: "${{vars.JF_NAME}}.jfrog.io/${{env.RT_REPO_VIRTUAL}}/${{env.ARTIFACT_NAME}}:${{env.ARTIFACT_VERSION}}"
           TAG11: "${{vars.JF_NAME}}.jfrog.io/${{env.RT_REPO_VIRTUAL}}/${{env.ARTIFACT_NAME}}:${{env.SHORT_COMMIT_CODE}}"
@@ -208,12 +209,11 @@ jobs:
           #    CERT-IN: https://www.cert-in.org.in/sbom/
       - name: "BuildInfo: Docker build create"
         run: |
-          imageDigest=$(cat "${{env.DOCKER_METADATA_JSON}}" | jq '.["containerimage.digest"]')
+          imageDigest=$(jq -r '.["containerimage.digest"]' "${{env.DOCKER_METADATA_JSON}}")
           echo "DOCKER_IMAGE_DIGEST: ${imageDigest}"
+          echo "DOCKER_IMAGE_DIGEST=${imageDigest}" >> "$GITHUB_ENV"
 
-          echo "DOCKER_IMAGE_DIGEST=${imageDigest}" >> $GITHUB_ENV. # set env var for next steps
-
-          echo "${{env.RT_REPO_DOCKER_URL}}@${imageDigest}" > ${{env.DOCKER_METADATA_JSON}}
+          echo "${{env.RT_REPO_DOCKER_URL}}@${imageDigest}" > "${{env.DOCKER_METADATA_JSON}}"
 
           jf rt bdc ${{env.RT_REPO_VIRTUAL}} --image-file ${{env.DOCKER_METADATA_JSON}} --build-name=${{env.BUILD_NAME}} --build-number=${{env.BUILD_ID}} --project="${{env.PROJECT_KEY}}"
 
@@ -245,8 +245,8 @@ jobs:
       # Set properties      
       - name: "Optional: Set prop for Artifact"  # These properties were captured Artifacts >> repo path 'spring-petclinic.---.jar' >> Properties
         run: |
-          ts="cmd.$(date '+%Y-%m-%d-%H-%M')" 
-          jf rt sp "job=github-action;env=demo;org=ps;team=arch;pack_cat=webapp;build=maven;product=artifactory;features=package,buildinfo;ts=ts-${BUILD_ID}" --build="${{env.BUILD_NAME}}/${{env.BUILD_ID}}" --project="${{env.PROJECT_KEY}}"
+          ts="cmd.$(date '+%Y-%m-%d-%H-%M')"
+          jf rt sp "job=github-action;env=demo;org=ps;team=arch;pack_cat=webapp;build=maven;product=artifactory;features=package,buildinfo;ts=${ts}" --build="${{env.BUILD_NAME}}/${{env.BUILD_ID}}" --project="${{env.PROJECT_KEY}}"
 
       - name: "Optional: Query build info"
         env: 
@@ -301,6 +301,7 @@ jobs:
        run:
          working-directory: "${{env.DEFAULT_WORKSPACE}}"
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: muldos/ci-traffic-monitor@v1
         with:
@@ -370,7 +371,6 @@ jobs:
       - name: "Xray & JAS: Audit" 
         continue-on-error: true  
         timeout-minutes: 15 
-        # continue-on-error: true 
         run: |
           jf audit --mvn --sast=true --sca=true --secrets=true --licenses=true --validate-secrets=true --vuln=true --format=table --extended-table=true --threads=100 --fail=false --project="${{env.PROJECT_KEY}}"
 
@@ -417,7 +417,7 @@ jobs:
       - name: "Create artifact digest"
         id: create_artifact_digest
         run: |
-          ARTIFACT_DIGEST=$(sha256sum target/spring-petclinic-*.jar | awk '{print "sha256:"$1}')
+          ARTIFACT_DIGEST=$(sha256sum "target/${{env.ARTIFACT_NAME}}-${{env.ARTIFACT_VERSION}}.jar" | awk '{print "sha256:"$1}')
           echo "artifact_digest=$ARTIFACT_DIGEST" >> $GITHUB_OUTPUT
 
       - name: "Evidence: Build Info"
@@ -457,6 +457,7 @@ jobs:
           jf evd create --build-name="${{env.BUILD_NAME}}" --build-number="${{env.BUILD_ID}}" --predicate="${{env.EVD_SPEC_JSON}}" --predicate-type="${{env.PREDICATE_TYPE}}" --key="${{secrets.KRISHNAM_JFROG_EVD_PRIVATEKEY}}" --key-alias="${{secrets.EVIDENCE_KEY_ALIAS}}" --project="${{env.PROJECT_KEY}}"
 
       - name: "Optional: Add Builds to Indexing Configuration"
+        continue-on-error: true
         run: |
           jf xr curl "/api/v1/binMgr/builds" -H 'Content-Type: application/json' -d '{"names": ["${{env.BUILD_NAME}}"] }'
 
@@ -509,6 +510,7 @@ jobs:
        run:
          working-directory: "${{env.DEFAULT_WORKSPACE}}"
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: muldos/ci-traffic-monitor@v1
         with:
@@ -520,9 +522,11 @@ jobs:
           JF_URL: ${{env.JF_RT_URL}}
           JF_PROJECT: "${{env.PROJECT_KEY}}"
           JFROG_CLI_LOG_LEVEL: "${{env.CLI_LOG_LEVEL}}"
+          JF_GIT_TOKEN: ${{secrets.GITHUB_TOKEN}}
         with:
-          version: latest 
+          version: latest
           oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
+          disable-job-summary: ${{env.JOB_SUMMARY}}
 
       - name: "Clone VCS"
         uses: actions/checkout@v6 # ref: https://github.com/actions/checkout
@@ -604,11 +608,10 @@ jobs:
         continue-on-error: true
         uses: actions/attest-build-provenance@v3     # https://github.com/marketplace/actions/attest-build-provenance
         with:
-          subject-name: "${{env.JF_RT_URL}}/${{env.RT_REPO_GRADLE_VIRTUAL}}/${{env.BUILD_NAME}}"
           subject-path: |
-            "${{ github.workspace }}/build/libs/spring-petclinic-*.jar"
-            "${{ github.workspace }}/build/build-info.json"
-            "${{ github.workspace }}/build/reports/application.cdx.json"
+            ${{ github.workspace }}/build/libs/spring-petclinic-*.jar
+            ${{ github.workspace }}/build/build-info.json
+            ${{ github.workspace }}/build/reports/application.cdx.json
           show-summary: true
           github-token: ${{secrets.GITHUB_TOKEN}} 
 
@@ -638,6 +641,13 @@ jobs:
       - dockerPackage
       - mvnPackage
       - gradlePackage
+    # Job-level permissions replace workflow defaults. id-token is required for JFrog OIDC.
+    # issues: write is the fallback (gh issue create --project) if Projects v2 token is missing.
+    permissions:
+      actions: read
+      id-token: write
+      contents: read
+      issues: write
     env:
       METADATA_NAME: "bpr-metadata-${{github.run_number}}"
       METADATA_FILE: "bpr_run_number-${{github.run_number}}.txt"
@@ -668,11 +678,24 @@ jobs:
       - name: "Clone VCS"
         uses: actions/checkout@v6 # ref: https://github.com/actions/checkout
 
+      - name: "Setup JFrog CLI"
+        uses: jfrog/setup-jfrog-cli@v5
+        env:
+          JF_URL: ${{env.JF_RT_URL}}
+          JF_PROJECT: "${{env.PROJECT_KEY}}"
+          JFROG_CLI_LOG_LEVEL: "${{env.CLI_LOG_LEVEL}}"
+        with:
+          version: latest
+          oidc-provider-name: ${{vars.JF_OIDC_PROVIDER_NAME}}
+          disable-job-summary: ${{env.JOB_SUMMARY}}
+
       - name: "setUp JDK provider = ${{env.JAVA_DISTRIBUTION}} with ver = ${{env.JAVA_VERSION}}"
         uses: actions/setup-java@v5  # ref https://github.com/actions/setup-java
         with:
           distribution: ${{env.JAVA_DISTRIBUTION}} # temurin
           java-version: ${{env.JAVA_VERSION}}  # 25
+          cache: 'maven'
+          cache-dependency-path: 'pom.xml'
 
       - name: "Create ENV variables"
         run: |
@@ -714,3 +737,88 @@ jobs:
           echo " " >> $GITHUB_STEP_SUMMARY
           echo " " >> $GITHUB_STEP_SUMMARY
 
+      # Projects v2 is org-scoped; GITHUB_TOKEN cannot write to it. Store a PAT (scope: project)
+      # or GitHub App token as GH_PROJECT_TOKEN. Without it this step falls back to a repo issue.
+      - name: "Create task in the GitHub Projects"
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GH_PROJECT_TOKEN || github.token }}
+          GH_OWNER: ${{ github.repository_owner }}
+          GH_PROJECT_NAME: "PS Team pipeline"
+          GH_PROJECT_ID: "1"
+          BUILD_ID: "${{ github.run_number }}"
+          GH_TASK_NAME: "bpr-${{ env.BUILD_NAME }}-${{ github.run_number }}"
+          GH_COLUMN_NAME: "UnAssigned"
+        run: |
+          set -euo pipefail
+
+          TASK_BODY=$(cat <<EOF
+          BPR package run for **${BUILD_NAME}**.
+
+          | Field | Value |
+          | --- | --- |
+          | Workflow | ${{ github.workflow }} |
+          | Run | [#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) |
+          | Commit | \`${LONG_COMMIT_CODE}\` (\`${SHORT_COMMIT_CODE}\`) |
+          | Branch | \`${{ github.ref_name }}\` |
+          | Artifact | ${ARTIFACT_NAME}:${ARTIFACT_VERSION} |
+          | JFrog project | ${PROJECT_KEY} |
+          | JFrog build | ${BUILD_NAME} / ${BUILD_ID} |
+          | JPD | ${JF_RT_URL} |
+          | Docker build | dkr-${{ github.run_number }} |
+          | Maven build | mvn-${{ github.run_number }} |
+          | Gradle build | gdl-${{ github.run_number }} |
+          | GitHub project | ${GH_PROJECT_NAME} (#${GH_PROJECT_ID}) |
+          | Column | ${GH_COLUMN_NAME} |
+          EOF
+          )
+
+          PROJECT_NUMBER="${GH_PROJECT_ID}"
+          RESOLVED_NUMBER="$(gh project list --owner "${GH_OWNER}" --limit 100 --format json \
+            --jq ".projects[] | select(.title == \"${GH_PROJECT_NAME}\") | .number" | head -n1 || true)"
+          if [[ -n "${RESOLVED_NUMBER}" ]]; then
+            PROJECT_NUMBER="${RESOLVED_NUMBER}"
+          fi
+          echo "Using GitHub Project '${GH_PROJECT_NAME}' number=${PROJECT_NUMBER} owner=${GH_OWNER}"
+
+          ITEM_JSON=""
+          if ITEM_JSON="$(gh project item-create "${PROJECT_NUMBER}" \
+            --owner "${GH_OWNER}" \
+            --title "${GH_TASK_NAME}" \
+            --body "${TASK_BODY}" \
+            --format json)"; then
+            echo "Created project draft item:"
+            echo "${ITEM_JSON}"
+            ITEM_ID="$(echo "${ITEM_JSON}" | jq -r '.id')"
+            PROJECT_NODE_ID="$(gh project view "${PROJECT_NUMBER}" --owner "${GH_OWNER}" --format json --jq '.id')"
+
+            if [[ -n "${GH_COLUMN_NAME}" && -n "${ITEM_ID}" && "${ITEM_ID}" != "null" ]]; then
+              FIELD_JSON="$(gh project field-list "${PROJECT_NUMBER}" --owner "${GH_OWNER}" --format json)"
+              MATCH="$(echo "${FIELD_JSON}" | jq -r --arg col "${GH_COLUMN_NAME}" '
+                .fields[]
+                | select(.options != null)
+                | . as $f
+                | .options[]
+                | select(.name == $col or ((.name | ascii_downcase) == ($col | ascii_downcase)))
+                | "\($f.id)\t\(.id)"
+              ' | head -n1)"
+              FIELD_ID="$(echo "${MATCH}" | cut -f1)"
+              OPTION_ID="$(echo "${MATCH}" | cut -f2)"
+              if [[ -n "${FIELD_ID}" && -n "${OPTION_ID}" ]]; then
+                gh project item-edit \
+                  --id "${ITEM_ID}" \
+                  --project-id "${PROJECT_NODE_ID}" \
+                  --field-id "${FIELD_ID}" \
+                  --single-select-option-id "${OPTION_ID}"
+              else
+                echo "No project field option matching GH_COLUMN_NAME='${GH_COLUMN_NAME}'; left item in the default column."
+              fi
+            fi
+          else
+            echo "Projects v2 create failed (need secrets.GH_PROJECT_TOKEN with project scope). Falling back to a repo issue."
+            gh issue create \
+              --repo "${{ github.repository }}" \
+              --title "${GH_TASK_NAME}" \
+              --body "${TASK_BODY}" \
+              --project "${GH_PROJECT_NAME}"
+          fi
