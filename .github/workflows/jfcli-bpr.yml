@@ -642,12 +642,12 @@ jobs:
       - mvnPackage
       - gradlePackage
     # Job-level permissions replace workflow defaults. id-token is required for JFrog OIDC.
-    # issues: write is the fallback (gh issue create --project) if Projects v2 token is missing.
+    # Repo Issues are disabled on ps-jfrog/spring-petclinic, so this job must not call gh issue create.
+    # Org Projects v2 writes need secrets.GH_PROJECT_TOKEN (GITHUB_TOKEN cannot add items).
     permissions:
       actions: read
       id-token: write
       contents: read
-      issues: write
     env:
       METADATA_NAME: "bpr-metadata-${{github.run_number}}"
       METADATA_FILE: "bpr_run_number-${{github.run_number}}.txt"
@@ -737,12 +737,11 @@ jobs:
           echo " " >> $GITHUB_STEP_SUMMARY
           echo " " >> $GITHUB_STEP_SUMMARY
 
-      # Projects v2 is org-scoped; GITHUB_TOKEN cannot write to it. Store a PAT (scope: project)
-      # or GitHub App token as GH_PROJECT_TOKEN. Without it this step falls back to a repo issue.
+      # Creates a Projects v2 *draft item* (not a repo Issue). GITHUB_TOKEN cannot write
+      # org projects; store a PAT (scope: project) or GitHub App token as GH_PROJECT_TOKEN.
       - name: "Create task in the GitHub Projects"
-        continue-on-error: true
         env:
-          GH_TOKEN: ${{ secrets.GH_PROJECT_TOKEN || github.token }}
+          GH_TOKEN: ${{ secrets.GH_PROJECT_TOKEN }}
           GH_OWNER: ${{ github.repository_owner }}
           GH_PROJECT_NAME: "PS Team pipeline"
           GH_PROJECT_ID: "1"
@@ -751,6 +750,11 @@ jobs:
           GH_COLUMN_NAME: "UnAssigned"
         run: |
           set -euo pipefail
+
+          if [[ -z "${GH_TOKEN}" ]]; then
+            echo "::error::secrets.GH_PROJECT_TOKEN is empty. Org GitHub Projects v2 cannot be written with GITHUB_TOKEN. ${{ github.repository }} has Issues disabled, so there is no gh issue create fallback."
+            exit 1
+          fi
 
           TASK_BODY=$(cat <<EOF
           BPR package run for **${BUILD_NAME}**.
@@ -781,44 +785,47 @@ jobs:
           fi
           echo "Using GitHub Project '${GH_PROJECT_NAME}' number=${PROJECT_NUMBER} owner=${GH_OWNER}"
 
-          ITEM_JSON=""
-          if ITEM_JSON="$(gh project item-create "${PROJECT_NUMBER}" \
+          set +e
+          ITEM_JSON="$(gh project item-create "${PROJECT_NUMBER}" \
             --owner "${GH_OWNER}" \
             --title "${GH_TASK_NAME}" \
             --body "${TASK_BODY}" \
-            --format json)"; then
-            echo "Created project draft item:"
-            echo "${ITEM_JSON}"
-            ITEM_ID="$(echo "${ITEM_JSON}" | jq -r '.id')"
-            PROJECT_NODE_ID="$(gh project view "${PROJECT_NUMBER}" --owner "${GH_OWNER}" --format json --jq '.id')"
+            --format json 2>/tmp/gh-project-item-create.err)"
+          CREATE_RC=$?
+          set -e
+          if [[ "${CREATE_RC}" -ne 0 ]]; then
+            echo "::error::gh project item-create failed (draft project item, not a repo Issue). Check GH_PROJECT_TOKEN project scope and that '${GH_PROJECT_NAME}' exists under ${GH_OWNER}."
+            cat /tmp/gh-project-item-create.err >&2 || true
+            exit 1
+          fi
 
-            if [[ -n "${GH_COLUMN_NAME}" && -n "${ITEM_ID}" && "${ITEM_ID}" != "null" ]]; then
-              FIELD_JSON="$(gh project field-list "${PROJECT_NUMBER}" --owner "${GH_OWNER}" --format json)"
-              MATCH="$(echo "${FIELD_JSON}" | jq -r --arg col "${GH_COLUMN_NAME}" '
-                .fields[]
-                | select(.options != null)
-                | . as $f
-                | .options[]
-                | select(.name == $col or ((.name | ascii_downcase) == ($col | ascii_downcase)))
-                | "\($f.id)\t\(.id)"
-              ' | head -n1)"
-              FIELD_ID="$(echo "${MATCH}" | cut -f1)"
-              OPTION_ID="$(echo "${MATCH}" | cut -f2)"
-              if [[ -n "${FIELD_ID}" && -n "${OPTION_ID}" ]]; then
-                gh project item-edit \
-                  --id "${ITEM_ID}" \
-                  --project-id "${PROJECT_NODE_ID}" \
-                  --field-id "${FIELD_ID}" \
-                  --single-select-option-id "${OPTION_ID}"
-              else
-                echo "No project field option matching GH_COLUMN_NAME='${GH_COLUMN_NAME}'; left item in the default column."
-              fi
+          echo "Created project draft item:"
+          echo "${ITEM_JSON}"
+          ITEM_ID="$(echo "${ITEM_JSON}" | jq -r '.id')"
+          PROJECT_NODE_ID="$(gh project view "${PROJECT_NUMBER}" --owner "${GH_OWNER}" --format json --jq '.id')"
+          PROJECT_URL="$(gh project view "${PROJECT_NUMBER}" --owner "${GH_OWNER}" --format json --jq '.url')"
+          echo "Project URL: ${PROJECT_URL}"
+          echo "- GitHub Project draft item \`${GH_TASK_NAME}\` on [${GH_PROJECT_NAME}](${PROJECT_URL}) (id: ${ITEM_ID})" >> "${GITHUB_STEP_SUMMARY}"
+
+          if [[ -n "${GH_COLUMN_NAME}" && -n "${ITEM_ID}" && "${ITEM_ID}" != "null" ]]; then
+            FIELD_JSON="$(gh project field-list "${PROJECT_NUMBER}" --owner "${GH_OWNER}" --format json)"
+            MATCH="$(echo "${FIELD_JSON}" | jq -r --arg col "${GH_COLUMN_NAME}" '
+              .fields[]
+              | select(.options != null)
+              | . as $f
+              | .options[]
+              | select(.name == $col or ((.name | ascii_downcase) == ($col | ascii_downcase)))
+              | "\($f.id)\t\(.id)"
+            ' | head -n1)"
+            FIELD_ID="$(echo "${MATCH}" | cut -f1)"
+            OPTION_ID="$(echo "${MATCH}" | cut -f2)"
+            if [[ -n "${FIELD_ID}" && -n "${OPTION_ID}" ]]; then
+              gh project item-edit \
+                --id "${ITEM_ID}" \
+                --project-id "${PROJECT_NODE_ID}" \
+                --field-id "${FIELD_ID}" \
+                --single-select-option-id "${OPTION_ID}"
+            else
+              echo "No project field option matching GH_COLUMN_NAME='${GH_COLUMN_NAME}'; left item in the default column."
             fi
-          else
-            echo "Projects v2 create failed (need secrets.GH_PROJECT_TOKEN with project scope). Falling back to a repo issue."
-            gh issue create \
-              --repo "${{ github.repository }}" \
-              --title "${GH_TASK_NAME}" \
-              --body "${TASK_BODY}" \
-              --project "${GH_PROJECT_NAME}"
           fi
