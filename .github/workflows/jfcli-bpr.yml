@@ -8,6 +8,7 @@ permissions:
   security-events: write # Required for uploading code scanning.
   attestations: write
   artifact-metadata: write
+  issues: write
 env:
   JF_RT_URL: "https://${{vars.JF_NAME}}.jfrog.io"
   BUILD_NAME: "spring-petclinic" # spring-petclinic-3.5.0-SNAPSHOT.jar
