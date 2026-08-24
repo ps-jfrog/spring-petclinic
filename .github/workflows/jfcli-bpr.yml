@@ -752,8 +752,9 @@ jobs:
           set -euo pipefail
 
           if [[ -z "${GH_TOKEN}" ]]; then
-            echo "::error::secrets.GH_PROJECT_TOKEN is empty. Org GitHub Projects v2 cannot be written with GITHUB_TOKEN. ${{ github.repository }} has Issues disabled, so there is no gh issue create fallback."
-            exit 1
+            echo "::warning::secrets.GH_PROJECT_TOKEN is empty; skipping GitHub Projects task creation. GITHUB_TOKEN cannot write org Projects v2, and ${{ github.repository }} has Issues disabled so there is no gh issue create fallback."
+            echo "- :warning: GitHub Projects task **skipped** (\`GH_PROJECT_TOKEN\` not configured)" >> "${GITHUB_STEP_SUMMARY}"
+            exit 0
           fi
 
           TASK_BODY=$(cat <<EOF
@@ -794,9 +795,10 @@ jobs:
           CREATE_RC=$?
           set -e
           if [[ "${CREATE_RC}" -ne 0 ]]; then
-            echo "::error::gh project item-create failed (draft project item, not a repo Issue). Check GH_PROJECT_TOKEN project scope and that '${GH_PROJECT_NAME}' exists under ${GH_OWNER}."
+            echo "::warning::gh project item-create failed (draft project item, not a repo Issue). Check GH_PROJECT_TOKEN project scope and that '${GH_PROJECT_NAME}' exists under ${GH_OWNER}."
             cat /tmp/gh-project-item-create.err >&2 || true
-            exit 1
+            echo "- :warning: GitHub Projects task **failed** for \`${GH_TASK_NAME}\` (see step log)" >> "${GITHUB_STEP_SUMMARY}"
+            exit 0
           fi
 
           echo "Created project draft item:"
